@@ -1,0 +1,5 @@
+numpy
+opencv-python-headless  # Используем headless, так как GUI не нужен
+scikit-image            # Для более удобной работы с watershed и шумом
+tqdm                    # Для красивого прогресс-бара в консоли
+noise                   # Для генерации Perlin noise (для бракованных пор)

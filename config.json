@@ -1,0 +1,56 @@
+{
+  "image_settings": {
+    "width": 512,
+    "height": 512,
+    "total_images": 100
+  },
+  "pore_settings": {
+    "single_pores": {
+      "count_range": [5, 15],
+      "radius_mean": 15,
+      "radius_std": 3,
+      "min_radius": 5,
+      "max_radius": 30,
+      "stretch_enabled": true,
+      "stretch_factor_range": [1.0, 2.0],
+      "rotation_enabled": true
+    },
+    "weakly_overlapping": {
+      "count_range": [2, 5],
+      "overlap_percentage_range": [0.1, 0.15],
+      "radius_mean": 12,
+      "radius_std": 2,
+      "stretch_enabled": true,
+      "stretch_factor_range": [1.0, 1.5],
+      "rotation_enabled": true
+    },
+    "strongly_overlapping": {
+      "count_range": [2, 4],
+      "overlap_percentage_range": [0.3, 0.5],
+      "radius_mean": 10,
+      "radius_std": 2,
+      "stretch_enabled": false,
+      "stretch_factor_range": [1.0, 1.3],
+      "rotation_enabled": false
+    },
+    "defective_pores": {
+      "count_range": [1, 3],
+      "radius_mean": 20,
+      "radius_std": 5,
+      "deformation_factor": 0.3,
+      "stretch_enabled": true,
+      "stretch_factor_range": [1.0, 1.8],
+      "rotation_enabled": true
+    }
+  },
+  "noise_settings": {
+    "min_gray_value": 200,
+    "max_gray_value": 255,
+    "noise_intensity": 0.1
+  },
+  "output_settings": {
+    "clean_dir": "./output/clean_background",
+    "noisy_dir": "./output/noisy_background",
+    "file_prefix": "pore_image"
+  }
+}
