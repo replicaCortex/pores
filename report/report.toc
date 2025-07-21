@@ -1,0 +1,16 @@
+\babel@toc {russian}{}\relax 
+\contentsline {section}{ВВЕДЕНИЕ}{3}{}%
+\contentsline {section}{\numberline {1}ТЕОРЕТИЧЕСКАЯ ЧАСТЬ}{4}{}%
+\contentsline {subsection}{\numberline {1.1}Классификация пор}{5}{}%
+\contentsline {section}{\numberline {2}ПРАКТИЧЕСКАЯ ЧАСТЬ}{6}{}%
+\contentsline {subsection}{\numberline {2.1}Архитектура приложения}{6}{}%
+\contentsline {subsection}{\numberline {2.2}Алгоритм генерации пор}{8}{}%
+\contentsline {subsubsection}{\numberline {2.2.1}Генерация одиночных пор}{9}{}%
+\contentsline {subsubsection}{\numberline {2.2.2}Создание перекрывающихся пор}{11}{}%
+\contentsline {subsubsection}{\numberline {2.2.3}Разделение слипшихся пор}{12}{}%
+\contentsline {subsubsection}{\numberline {2.2.4}Имитация текстурного шума}{13}{}%
+\contentsline {subsection}{\numberline {2.3}Формирование выходных данных}{15}{}%
+\contentsline {section}{\numberline {3}РЕЗУЛЬТАТ РАБОТЫ ПРОГРАММЫ}{16}{}%
+\contentsline {section}{ЗАКЛЮЧЕНИЕ}{19}{}%
+\contentsline {section}{СПИСОК ИСПОЛЬЗОВАННЫХ ИСТОЧНИКОВ}{20}{}%
+\contentsline {section}{ПРИЛОЖЕНИЕ А}{21}{}%

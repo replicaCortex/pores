@@ -1,0 +1,84 @@
+\begin{MintedVerbatim}[commandchars=\\\{\}]
+\PYG{c+c1}{\PYGZsh{} Метод для добавления одиночных пор на изображение}
+\PYG{k}{def}\PYG{+w}{ }\PYG{n+nf}{\PYGZus{}add\PYGZus{}single\PYGZus{}pores}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{p}{,} \PYG{n}{image}\PYG{p}{:} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ndarray}\PYG{p}{,} \PYG{n}{pore\PYGZus{}info}\PYG{p}{:} \PYG{n}{Dict}\PYG{p}{[}\PYG{n+nb}{str}\PYG{p}{,} \PYG{n}{List}\PYG{p}{]}\PYG{p}{)} \PYG{o}{\PYGZhy{}}\PYG{o}{\PYGZgt{}} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ndarray}\PYG{p}{:}
+    \PYG{c+c1}{\PYGZsh{} Загрузка настроек для одиночных пор из конфигурации}
+    \PYG{n}{settings} \PYG{o}{=} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{config}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{pore\PYGZus{}settings}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{single\PYGZus{}pores}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}
+    \PYG{c+c1}{\PYGZsh{} Определение случайного количества пор для генерации в заданном диапазоне}
+    \PYG{n}{count} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{randint}\PYG{p}{(}\PYG{o}{*}\PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{count\PYGZus{}range}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{)}
+
+    \PYG{c+c1}{\PYGZsh{} Цикл генерации заданного количества пор}
+    \PYG{k}{for} \PYG{n}{\PYGZus{}} \PYG{o+ow}{in} \PYG{n+nb}{range}\PYG{p}{(}\PYG{n}{count}\PYG{p}{)}\PYG{p}{:}
+        \PYG{c+c1}{\PYGZsh{} Генерация радиуса поры на основе нормального распределения}
+        \PYG{n}{radius} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{random}\PYG{o}{.}\PYG{n}{normal}\PYG{p}{(}\PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{radius\PYGZus{}mean}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{,} \PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{radius\PYGZus{}std}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{)}
+        \PYG{c+c1}{\PYGZsh{} Ограничение радиуса в заданных пределах (min/max)}
+        \PYG{n}{radius} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n}{np}\PYG{o}{.}\PYG{n}{clip}\PYG{p}{(}\PYG{n}{radius}\PYG{p}{,} \PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{min\PYGZus{}radius}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{,} \PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{max\PYGZus{}radius}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{)}\PYG{p}{)}
+
+        \PYG{c+c1}{\PYGZsh{} Инициализация параметров растяжения и угла поворота по умолчанию}
+        \PYG{n}{stretch\PYGZus{}factor} \PYG{o}{=} \PYG{l+m+mf}{1.0}
+        \PYG{n}{angle} \PYG{o}{=} \PYG{l+m+mf}{0.0}
+        \PYG{c+c1}{\PYGZsh{} Если растяжение включено в конфигурации}
+        \PYG{k}{if} \PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{stretch\PYGZus{}enabled}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{:}
+            \PYG{c+c1}{\PYGZsh{} Генерируется случайный фактор растяжения}
+            \PYG{n}{stretch\PYGZus{}factor} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{uniform}\PYG{p}{(}\PYG{o}{*}\PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{stretch\PYGZus{}factor\PYGZus{}range}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{)}
+            \PYG{c+c1}{\PYGZsh{} Если вращение включено, генерируется случайный угол}
+            \PYG{k}{if} \PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{rotation\PYGZus{}enabled}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{:}
+                \PYG{n}{angle} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{uniform}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{l+m+mi}{180}\PYG{p}{)}
+
+        \PYG{c+c1}{\PYGZsh{} Расчет эффективного радиуса для проверки столкновений и размещения}
+        \PYG{n}{effective\PYGZus{}radius} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n}{radius} \PYG{o}{*} \PYG{n}{stretch\PYGZus{}factor}\PYG{p}{)}
+        \PYG{c+c1}{\PYGZsh{} Если пора вытянутая (эллиптическая)}
+        \PYG{k}{if} \PYG{n}{stretch\PYGZus{}factor} \PYG{o}{\PYGZgt{}} \PYG{l+m+mf}{1.0}\PYG{p}{:}
+            \PYG{c+c1}{\PYGZsh{} Создание эллиптической поры на отдельном холсте}
+            \PYG{n}{pore\PYGZus{}canvas}\PYG{p}{,} \PYG{n}{center} \PYG{o}{=} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{\PYGZus{}create\PYGZus{}elliptical\PYGZus{}pore}\PYG{p}{(}\PYG{n}{radius}\PYG{p}{,} \PYG{n}{stretch\PYGZus{}factor}\PYG{p}{,} \PYG{n}{angle}\PYG{p}{)}
+        \PYG{k}{else}\PYG{p}{:}
+            \PYG{c+c1}{\PYGZsh{} Создание обычной круглой поры}
+            \PYG{n}{canvas\PYGZus{}size} \PYG{o}{=} \PYG{n}{radius} \PYG{o}{*} \PYG{l+m+mi}{2} \PYG{o}{+} \PYG{l+m+mi}{1}
+            \PYG{n}{pore\PYGZus{}canvas} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ones}\PYG{p}{(}\PYG{p}{(}\PYG{n}{canvas\PYGZus{}size}\PYG{p}{,} \PYG{n}{canvas\PYGZus{}size}\PYG{p}{)}\PYG{p}{,} \PYG{n}{dtype}\PYG{o}{=}\PYG{n}{np}\PYG{o}{.}\PYG{n}{uint8}\PYG{p}{)} \PYG{o}{*} \PYG{l+m+mi}{255}
+            \PYG{n}{cv2}\PYG{o}{.}\PYG{n}{circle}\PYG{p}{(}\PYG{n}{pore\PYGZus{}canvas}\PYG{p}{,} \PYG{p}{(}\PYG{n}{radius}\PYG{p}{,} \PYG{n}{radius}\PYG{p}{)}\PYG{p}{,} \PYG{n}{radius}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{,} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{)}
+            \PYG{n}{center} \PYG{o}{=} \PYG{n}{radius}
+
+        \PYG{c+c1}{\PYGZsh{} Попытка найти свободное место для размещения поры (до 100 попыток)}
+        \PYG{n}{placed} \PYG{o}{=} \PYG{k+kc}{False}
+        \PYG{k}{for} \PYG{n}{\PYGZus{}} \PYG{o+ow}{in} \PYG{n+nb}{range}\PYG{p}{(}\PYG{l+m+mi}{100}\PYG{p}{)}\PYG{p}{:}
+            \PYG{c+c1}{\PYGZsh{} Генерация случайных координат центра поры}
+            \PYG{n}{x} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{randint}\PYG{p}{(}\PYG{n}{effective\PYGZus{}radius}\PYG{p}{,} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{width} \PYG{o}{\PYGZhy{}} \PYG{n}{effective\PYGZus{}radius}\PYG{p}{)}
+            \PYG{n}{y} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{randint}\PYG{p}{(}\PYG{n}{effective\PYGZus{}radius}\PYG{p}{,} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{height} \PYG{o}{\PYGZhy{}} \PYG{n}{effective\PYGZus{}radius}\PYG{p}{)}
+
+            \PYG{c+c1}{\PYGZsh{} Проверка, свободна ли выбранная область}
+            \PYG{k}{if} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{\PYGZus{}is\PYGZus{}area\PYGZus{}free}\PYG{p}{(}\PYG{n}{image}\PYG{p}{,} \PYG{n}{x}\PYG{p}{,} \PYG{n}{y}\PYG{p}{,} \PYG{n}{effective\PYGZus{}radius}\PYG{p}{)}\PYG{p}{:}
+                \PYG{c+c1}{\PYGZsh{} Если область свободна, размещаем пору на основном изображении}
+                \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{\PYGZus{}place\PYGZus{}on\PYGZus{}image}\PYG{p}{(}\PYG{n}{image}\PYG{p}{,} \PYG{n}{pore\PYGZus{}canvas}\PYG{p}{,} \PYG{n}{center}\PYG{p}{,} \PYG{n}{x}\PYG{p}{,} \PYG{n}{y}\PYG{p}{)}
+                \PYG{c+c1}{\PYGZsh{} Сохранение информации о размещенной поре}
+                \PYG{n}{pore\PYGZus{}info}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{single}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{o}{.}\PYG{n}{append}\PYG{p}{(}\PYG{p}{\PYGZob{}}
+                    \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{x}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{n}{x}\PYG{p}{,} \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{y}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{n}{y}\PYG{p}{,} \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{radius}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{n}{radius}\PYG{p}{,}
+                    \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{stretch\PYGZus{}factor}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{n}{stretch\PYGZus{}factor}\PYG{p}{,} \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{angle}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{n}{angle}
+                \PYG{p}{\PYGZcb{}}\PYG{p}{)}
+                \PYG{n}{placed} \PYG{o}{=} \PYG{k+kc}{True}
+                \PYG{k}{break}  \PYG{c+c1}{\PYGZsh{} Выход из цикла попыток, так как пора размещена}
+    \PYG{k}{return} \PYG{n}{image}
+
+\PYG{c+c1}{\PYGZsh{} Метод для создания эллиптической поры на временном холсте}
+\PYG{k}{def}\PYG{+w}{ }\PYG{n+nf}{\PYGZus{}create\PYGZus{}elliptical\PYGZus{}pore}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{p}{,} \PYG{n}{radius}\PYG{p}{:} \PYG{n+nb}{int}\PYG{p}{,} \PYG{n}{stretch\PYGZus{}factor}\PYG{p}{:} \PYG{n+nb}{float}\PYG{p}{,} \PYG{n}{angle}\PYG{p}{:} \PYG{n+nb}{float}\PYG{p}{)} \PYG{o}{\PYGZhy{}}\PYG{o}{\PYGZgt{}} \PYG{n}{Tuple}\PYG{p}{[}\PYG{n}{np}\PYG{o}{.}\PYG{n}{ndarray}\PYG{p}{,} \PYG{n+nb}{int}\PYG{p}{]}\PYG{p}{:}
+    \PYG{c+c1}{\PYGZsh{} Создание временного холста, размер которого гарантирует, что эллипс поместится}
+    \PYG{n}{canvas\PYGZus{}size} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n}{radius} \PYG{o}{*} \PYG{l+m+mi}{2} \PYG{o}{*} \PYG{n}{stretch\PYGZus{}factor} \PYG{o}{*} \PYG{l+m+mf}{1.5}\PYG{p}{)}
+    \PYG{n}{canvas} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ones}\PYG{p}{(}\PYG{p}{(}\PYG{n}{canvas\PYGZus{}size}\PYG{p}{,} \PYG{n}{canvas\PYGZus{}size}\PYG{p}{)}\PYG{p}{,} \PYG{n}{dtype}\PYG{o}{=}\PYG{n}{np}\PYG{o}{.}\PYG{n}{uint8}\PYG{p}{)} \PYG{o}{*} \PYG{l+m+mi}{255}
+    \PYG{n}{center} \PYG{o}{=} \PYG{n}{canvas\PYGZus{}size} \PYG{o}{/}\PYG{o}{/} \PYG{l+m+mi}{2}
+
+    \PYG{c+c1}{\PYGZsh{} Определение осей эллипса}
+    \PYG{n}{axes} \PYG{o}{=} \PYG{p}{(}\PYG{n+nb}{int}\PYG{p}{(}\PYG{n}{radius} \PYG{o}{*} \PYG{n}{stretch\PYGZus{}factor}\PYG{p}{)}\PYG{p}{,} \PYG{n}{radius}\PYG{p}{)}
+    \PYG{c+c1}{\PYGZsh{} Рисование черного эллипса на белом холсте}
+    \PYG{n}{cv2}\PYG{o}{.}\PYG{n}{ellipse}\PYG{p}{(}\PYG{n}{canvas}\PYG{p}{,} \PYG{p}{(}\PYG{n}{center}\PYG{p}{,} \PYG{n}{center}\PYG{p}{)}\PYG{p}{,} \PYG{n}{axes}\PYG{p}{,} \PYG{n}{angle}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{,} \PYG{l+m+mi}{360}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{,} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{)}
+
+    \PYG{k}{return} \PYG{n}{canvas}\PYG{p}{,} \PYG{n}{center}
+
+\PYG{c+c1}{\PYGZsh{} Метод для проверки, свободна ли область на изображении}
+\PYG{k}{def}\PYG{+w}{ }\PYG{n+nf}{\PYGZus{}is\PYGZus{}area\PYGZus{}free}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{p}{,} \PYG{n}{image}\PYG{p}{:} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ndarray}\PYG{p}{,} \PYG{n}{x}\PYG{p}{:} \PYG{n+nb}{int}\PYG{p}{,} \PYG{n}{y}\PYG{p}{:} \PYG{n+nb}{int}\PYG{p}{,} \PYG{n}{radius}\PYG{p}{:} \PYG{n+nb}{int}\PYG{p}{,} \PYG{n}{padding}\PYG{p}{:} \PYG{n+nb}{int} \PYG{o}{=} \PYG{l+m+mi}{5}\PYG{p}{)} \PYG{o}{\PYGZhy{}}\PYG{o}{\PYGZgt{}} \PYG{n+nb}{bool}\PYG{p}{:}
+    \PYG{c+c1}{\PYGZsh{} Определение границ проверяемой области с учетом отступов (padding)}
+    \PYG{n}{y\PYGZus{}start} \PYG{o}{=} \PYG{n+nb}{max}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{n}{y} \PYG{o}{\PYGZhy{}} \PYG{n}{radius} \PYG{o}{\PYGZhy{}} \PYG{n}{padding}\PYG{p}{)}
+    \PYG{n}{y\PYGZus{}end} \PYG{o}{=} \PYG{n+nb}{min}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{height}\PYG{p}{,} \PYG{n}{y} \PYG{o}{+} \PYG{n}{radius} \PYG{o}{+} \PYG{n}{padding}\PYG{p}{)}
+    \PYG{n}{x\PYGZus{}start} \PYG{o}{=} \PYG{n+nb}{max}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{n}{x} \PYG{o}{\PYGZhy{}} \PYG{n}{radius} \PYG{o}{\PYGZhy{}} \PYG{n}{padding}\PYG{p}{)}
+    \PYG{n}{x\PYGZus{}end} \PYG{o}{=} \PYG{n+nb}{min}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{width}\PYG{p}{,} \PYG{n}{x} \PYG{o}{+} \PYG{n}{radius} \PYG{o}{+} \PYG{n}{padding}\PYG{p}{)}
+
+    \PYG{c+c1}{\PYGZsh{} Проверка, что все пиксели в области являются фоновыми (белыми, значение 255)}
+    \PYG{k}{return} \PYG{n}{np}\PYG{o}{.}\PYG{n}{all}\PYG{p}{(}\PYG{n}{image}\PYG{p}{[}\PYG{n}{y\PYGZus{}start}\PYG{p}{:}\PYG{n}{y\PYGZus{}end}\PYG{p}{,} \PYG{n}{x\PYGZus{}start}\PYG{p}{:}\PYG{n}{x\PYGZus{}end}\PYG{p}{]} \PYG{o}{==} \PYG{l+m+mi}{255}\PYG{p}{)}
+\end{MintedVerbatim}

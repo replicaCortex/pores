@@ -1,0 +1,18 @@
+\begin{MintedVerbatim}[commandchars=\\\{\}]
+\PYG{c+c1}{\PYGZsh{} Получение случайного процента перекрытия из заданного в конфигурации диапазона}
+\PYG{n}{overlap\PYGZus{}percent} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{uniform}\PYG{p}{(}\PYG{o}{*}\PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{overlap\PYGZus{}percentage\PYGZus{}range}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{)}
+\PYG{c+c1}{\PYGZsh{} Координаты центра предыдущей поры, относительно которой размещается новая}
+\PYG{n}{prev\PYGZus{}x}\PYG{p}{,} \PYG{n}{prev\PYGZus{}y} \PYG{o}{=} \PYG{n}{centers}\PYG{p}{[}\PYG{n}{i}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{]}
+\PYG{c+c1}{\PYGZsh{} Эффективные радиусы предыдущей и текущей пор (с учетом растяжения)}
+\PYG{n}{effective\PYGZus{}prev\PYGZus{}radius} \PYG{o}{=} \PYG{n}{radii}\PYG{p}{[}\PYG{n}{i}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{]} \PYG{o}{*} \PYG{n}{stretch\PYGZus{}factors}\PYG{p}{[}\PYG{n}{i}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{]}
+\PYG{n}{effective\PYGZus{}radius} \PYG{o}{=} \PYG{n}{radius} \PYG{o}{*} \PYG{n}{stretch\PYGZus{}factor}
+
+\PYG{c+c1}{\PYGZsh{} Расчет расстояния между центрами пор на основе их радиусов и процента перекрытия}
+\PYG{n}{distance} \PYG{o}{=} \PYG{p}{(}\PYG{n}{effective\PYGZus{}prev\PYGZus{}radius} \PYG{o}{+} \PYG{n}{effective\PYGZus{}radius}\PYG{p}{)} \PYG{o}{*} \PYG{p}{(}\PYG{l+m+mi}{1} \PYG{o}{\PYGZhy{}} \PYG{n}{overlap\PYGZus{}percent}\PYG{p}{)}
+\PYG{c+c1}{\PYGZsh{} Выбор случайного направления для размещения следующей поры}
+\PYG{n}{direction\PYGZus{}angle} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{uniform}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{l+m+mi}{2} \PYG{o}{*} \PYG{n}{np}\PYG{o}{.}\PYG{n}{pi}\PYG{p}{)}
+
+\PYG{c+c1}{\PYGZsh{} Вычисление координат новой поры с использованием тригонометрии}
+\PYG{n}{x} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n}{prev\PYGZus{}x} \PYG{o}{+} \PYG{n}{distance} \PYG{o}{*} \PYG{n}{np}\PYG{o}{.}\PYG{n}{cos}\PYG{p}{(}\PYG{n}{direction\PYGZus{}angle}\PYG{p}{)}\PYG{p}{)}
+\PYG{n}{y} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n}{prev\PYGZus{}y} \PYG{o}{+} \PYG{n}{distance} \PYG{o}{*} \PYG{n}{np}\PYG{o}{.}\PYG{n}{sin}\PYG{p}{(}\PYG{n}{direction\PYGZus{}angle}\PYG{p}{)}\PYG{p}{)}
+\end{MintedVerbatim}

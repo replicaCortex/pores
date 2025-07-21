@@ -1,0 +1,47 @@
+\begin{MintedVerbatim}[commandchars=\\\{\}]
+\PYG{c+c1}{\PYGZsh{} Метод для генерации процедурного текстурного шума}
+\PYG{k}{def}\PYG{+w}{ }\PYG{n+nf}{\PYGZus{}generate\PYGZus{}texture\PYGZus{}noise}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{p}{,} \PYG{n}{shape}\PYG{p}{,} \PYG{n}{intensity}\PYG{p}{)}\PYG{p}{:}
+    \PYG{n}{height}\PYG{p}{,} \PYG{n}{width} \PYG{o}{=} \PYG{n}{shape}
+    \PYG{c+c1}{\PYGZsh{} Инициализация пустого (черного) изображения для текстуры}
+    \PYG{n}{texture} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{zeros}\PYG{p}{(}\PYG{n}{shape}\PYG{p}{)}
+
+    \PYG{c+c1}{\PYGZsh{} Генерация и наложение нескольких слоев шума с разным масштабом и весом}
+
+    \PYG{c+c1}{\PYGZsh{} 1. Низкочастотный шум}
+    \PYG{n}{scale1} \PYG{o}{=} \PYG{l+m+mi}{50}
+    \PYG{c+c1}{\PYGZsh{} Создается маленькое случайное изображение и растягивается до нужного размера с интерполяцией}
+    \PYG{n}{noise1} \PYG{o}{=} \PYG{n}{cv2}\PYG{o}{.}\PYG{n}{resize}\PYG{p}{(}
+        \PYG{n}{np}\PYG{o}{.}\PYG{n}{random}\PYG{o}{.}\PYG{n}{randn}\PYG{p}{(}\PYG{n}{height} \PYG{o}{/}\PYG{o}{/} \PYG{n}{scale1}\PYG{p}{,} \PYG{n}{width} \PYG{o}{/}\PYG{o}{/} \PYG{n}{scale1}\PYG{p}{)}\PYG{p}{,}
+        \PYG{p}{(}\PYG{n}{width}\PYG{p}{,} \PYG{n}{height}\PYG{p}{)}\PYG{p}{,}
+        \PYG{n}{interpolation}\PYG{o}{=}\PYG{n}{cv2}\PYG{o}{.}\PYG{n}{INTER\PYGZus{}CUBIC}\PYG{p}{,}
+    \PYG{p}{)}
+    \PYG{n}{texture} \PYG{o}{+}\PYG{o}{=} \PYG{n}{noise1} \PYG{o}{*} \PYG{l+m+mf}{0.5}  \PYG{c+c1}{\PYGZsh{} Добавление с весом 0.5}
+
+    \PYG{c+c1}{\PYGZsh{} 2. Среднечастотный шум}
+    \PYG{n}{scale2} \PYG{o}{=} \PYG{l+m+mi}{20}
+    \PYG{n}{noise2} \PYG{o}{=} \PYG{n}{cv2}\PYG{o}{.}\PYG{n}{resize}\PYG{p}{(}
+        \PYG{n}{np}\PYG{o}{.}\PYG{n}{random}\PYG{o}{.}\PYG{n}{randn}\PYG{p}{(}\PYG{n}{height} \PYG{o}{/}\PYG{o}{/} \PYG{n}{scale2}\PYG{p}{,} \PYG{n}{width} \PYG{o}{/}\PYG{o}{/} \PYG{n}{scale2}\PYG{p}{)}\PYG{p}{,}
+        \PYG{p}{(}\PYG{n}{width}\PYG{p}{,} \PYG{n}{height}\PYG{p}{)}\PYG{p}{,}
+        \PYG{n}{interpolation}\PYG{o}{=}\PYG{n}{cv2}\PYG{o}{.}\PYG{n}{INTER\PYGZus{}CUBIC}\PYG{p}{,}
+    \PYG{p}{)}
+    \PYG{n}{texture} \PYG{o}{+}\PYG{o}{=} \PYG{n}{noise2} \PYG{o}{*} \PYG{l+m+mf}{0.3}  \PYG{c+c1}{\PYGZsh{} Добавление с весом 0.3}
+
+    \PYG{c+c1}{\PYGZsh{} 3. Высокочастотный шум}
+    \PYG{n}{scale3} \PYG{o}{=} \PYG{l+m+mi}{5}
+    \PYG{n}{noise3} \PYG{o}{=} \PYG{n}{cv2}\PYG{o}{.}\PYG{n}{resize}\PYG{p}{(}
+        \PYG{n}{np}\PYG{o}{.}\PYG{n}{random}\PYG{o}{.}\PYG{n}{randn}\PYG{p}{(}\PYG{n}{height} \PYG{o}{/}\PYG{o}{/} \PYG{n}{scale3}\PYG{p}{,} \PYG{n}{width} \PYG{o}{/}\PYG{o}{/} \PYG{n}{scale3}\PYG{p}{)}\PYG{p}{,}
+        \PYG{p}{(}\PYG{n}{width}\PYG{p}{,} \PYG{n}{height}\PYG{p}{)}\PYG{p}{,}
+        \PYG{n}{interpolation}\PYG{o}{=}\PYG{n}{cv2}\PYG{o}{.}\PYG{n}{INTER\PYGZus{}CUBIC}\PYG{p}{,}
+    \PYG{p}{)}
+    \PYG{n}{texture} \PYG{o}{+}\PYG{o}{=} \PYG{n}{noise3} \PYG{o}{*} \PYG{l+m+mf}{0.2}  \PYG{c+c1}{\PYGZsh{} Добавление с весом 0.2}
+
+    \PYG{c+c1}{\PYGZsh{} Нормализация полученной текстуры в диапазон [0, 1]}
+    \PYG{n}{texture} \PYG{o}{=} \PYG{p}{(}\PYG{n}{texture} \PYG{o}{\PYGZhy{}} \PYG{n}{texture}\PYG{o}{.}\PYG{n}{min}\PYG{p}{(}\PYG{p}{)}\PYG{p}{)} \PYG{o}{/} \PYG{p}{(}\PYG{n}{texture}\PYG{o}{.}\PYG{n}{max}\PYG{p}{(}\PYG{p}{)} \PYG{o}{\PYGZhy{}} \PYG{n}{texture}\PYG{o}{.}\PYG{n}{min}\PYG{p}{(}\PYG{p}{)}\PYG{p}{)}
+    \PYG{c+c1}{\PYGZsh{} Получение диапазона яркости из настроек}
+    \PYG{n}{min\PYGZus{}gray} \PYG{o}{=} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{noise\PYGZus{}settings}\PYG{p}{[}\PYG{l+s+s2}{\PYGZdq{}}\PYG{l+s+s2}{min\PYGZus{}gray\PYGZus{}value}\PYG{l+s+s2}{\PYGZdq{}}\PYG{p}{]}
+    \PYG{n}{max\PYGZus{}gray} \PYG{o}{=} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{noise\PYGZus{}settings}\PYG{p}{[}\PYG{l+s+s2}{\PYGZdq{}}\PYG{l+s+s2}{max\PYGZus{}gray\PYGZus{}value}\PYG{l+s+s2}{\PYGZdq{}}\PYG{p}{]}
+    \PYG{c+c1}{\PYGZsh{} Масштабирование текстуры до заданного диапазона яркости серого}
+    \PYG{n}{texture} \PYG{o}{=} \PYG{n}{texture} \PYG{o}{*} \PYG{p}{(}\PYG{n}{max\PYGZus{}gray} \PYG{o}{\PYGZhy{}} \PYG{n}{min\PYGZus{}gray}\PYG{p}{)} \PYG{o}{+} \PYG{n}{min\PYGZus{}gray}
+
+    \PYG{k}{return} \PYG{n}{texture}
+\end{MintedVerbatim}

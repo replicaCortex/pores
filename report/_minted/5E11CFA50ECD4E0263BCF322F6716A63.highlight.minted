@@ -1,0 +1,40 @@
+\begin{MintedVerbatim}[commandchars=\\\{\}]
+\PYG{p}{\PYGZob{}}
+\PYG{+w}{  }\PYG{n+nt}{\PYGZdq{}image\PYGZus{}settings\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{    }\PYG{n+nt}{\PYGZdq{}width\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{l+m+mi}{512}\PYG{p}{,}
+\PYG{+w}{    }\PYG{n+nt}{\PYGZdq{}height\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{l+m+mi}{512}\PYG{p}{,}
+\PYG{+w}{    }\PYG{n+nt}{\PYGZdq{}total\PYGZus{}images\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{l+m+mi}{100}
+\PYG{+w}{  }\PYG{p}{\PYGZcb{},}
+\PYG{+w}{  }\PYG{n+nt}{\PYGZdq{}pore\PYGZus{}settings\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{    }\PYG{n+nt}{\PYGZdq{}single\PYGZus{}pores\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{      }\PYG{n+nt}{\PYGZdq{}count\PYGZus{}range\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{p}{[}\PYG{l+m+mi}{5}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{15}\PYG{p}{],}
+\PYG{+w}{      }\PYG{n+nt}{\PYGZdq{}radius\PYGZus{}mean\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{l+m+mi}{15}\PYG{p}{,}
+\PYG{+w}{      }\PYG{n+nt}{\PYGZdq{}radius\PYGZus{}std\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{l+m+mi}{3}\PYG{p}{,}
+\PYG{+w}{      }\PYG{n+nt}{\PYGZdq{}min\PYGZus{}radius\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{l+m+mi}{5}\PYG{p}{,}
+\PYG{+w}{      }\PYG{n+nt}{\PYGZdq{}max\PYGZus{}radius\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{l+m+mi}{30}\PYG{p}{,}
+\PYG{+w}{      }\PYG{n+nt}{\PYGZdq{}stretch\PYGZus{}enabled\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{k+kc}{true}\PYG{p}{,}
+\PYG{+w}{      }\PYG{n+nt}{\PYGZdq{}stretch\PYGZus{}factor\PYGZus{}range\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{p}{[}\PYG{l+m+mf}{1.0}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mf}{2.0}\PYG{p}{],}
+\PYG{+w}{      }\PYG{n+nt}{\PYGZdq{}rotation\PYGZus{}enabled\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{k+kc}{true}
+\PYG{+w}{    }\PYG{p}{\PYGZcb{},}
+\PYG{+w}{    }\PYG{n+nt}{\PYGZdq{}weakly\PYGZus{}overlapping\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{      }\PYG{n+nt}{\PYGZdq{}count\PYGZus{}range\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{p}{[}\PYG{l+m+mi}{2}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{5}\PYG{p}{],}
+\PYG{+w}{      }\PYG{n+nt}{\PYGZdq{}overlap\PYGZus{}percentage\PYGZus{}range\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{p}{[}\PYG{l+m+mf}{0.1}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mf}{0.15}\PYG{p}{],}
+\PYG{+w}{      }\PYG{n+nt}{\PYGZdq{}radius\PYGZus{}mean\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{l+m+mi}{12}\PYG{p}{,}
+\PYG{+w}{      }\PYG{n+nt}{\PYGZdq{}radius\PYGZus{}std\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{l+m+mi}{2}\PYG{p}{,}
+\PYG{+w}{      }\PYG{n+nt}{\PYGZdq{}stretch\PYGZus{}enabled\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{k+kc}{true}\PYG{p}{,}
+\PYG{+w}{      }\PYG{n+nt}{\PYGZdq{}stretch\PYGZus{}factor\PYGZus{}range\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{p}{[}\PYG{l+m+mf}{1.0}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mf}{1.5}\PYG{p}{],}
+\PYG{+w}{      }\PYG{n+nt}{\PYGZdq{}rotation\PYGZus{}enabled\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{k+kc}{true}
+\PYG{+w}{    }\PYG{p}{\PYGZcb{}}
+\PYG{+w}{  }\PYG{p}{\PYGZcb{},}
+\PYG{+w}{  }\PYG{n+nt}{\PYGZdq{}noise\PYGZus{}settings\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{    }\PYG{n+nt}{\PYGZdq{}min\PYGZus{}gray\PYGZus{}value\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{l+m+mi}{200}\PYG{p}{,}
+\PYG{+w}{    }\PYG{n+nt}{\PYGZdq{}max\PYGZus{}gray\PYGZus{}value\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{l+m+mi}{255}\PYG{p}{,}
+\PYG{+w}{    }\PYG{n+nt}{\PYGZdq{}noise\PYGZus{}intensity\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{l+m+mf}{0.1}
+\PYG{+w}{  }\PYG{p}{\PYGZcb{},}
+\PYG{+w}{  }\PYG{n+nt}{\PYGZdq{}output\PYGZus{}settings\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{    }\PYG{n+nt}{\PYGZdq{}clean\PYGZus{}dir\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{l+s+s2}{\PYGZdq{}./output/clean\PYGZus{}background\PYGZdq{}}\PYG{p}{,}
+\PYG{+w}{    }\PYG{n+nt}{\PYGZdq{}noisy\PYGZus{}dir\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{l+s+s2}{\PYGZdq{}./output/noisy\PYGZus{}background\PYGZdq{}}\PYG{p}{,}
+\PYG{+w}{    }\PYG{n+nt}{\PYGZdq{}file\PYGZus{}prefix\PYGZdq{}}\PYG{p}{:}\PYG{+w}{ }\PYG{l+s+s2}{\PYGZdq{}pore\PYGZus{}image\PYGZdq{}}
+\PYG{+w}{  }\PYG{p}{\PYGZcb{}}
+\PYG{p}{\PYGZcb{}}
+\end{MintedVerbatim}

@@ -1,0 +1,33 @@
+\begin{MintedVerbatim}[commandchars=\\\{\}]
+\PYG{c+c1}{\PYGZsh{} Метод применяет алгоритм водораздела для разделения соприкасающихся объектов}
+\PYG{k}{def}\PYG{+w}{ }\PYG{n+nf}{\PYGZus{}apply\PYGZus{}watershed}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{p}{,} \PYG{n}{image}\PYG{p}{:} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ndarray}\PYG{p}{)} \PYG{o}{\PYGZhy{}}\PYG{o}{\PYGZgt{}} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ndarray}\PYG{p}{:}
+    \PYG{c+c1}{\PYGZsh{} Инвертирование изображения: поры становятся белыми, фон — черным}
+    \PYG{n}{inverted} \PYG{o}{=} \PYG{n}{cv2}\PYG{o}{.}\PYG{n}{bitwise\PYGZus{}not}\PYG{p}{(}\PYG{n}{image}\PYG{p}{)}
+    \PYG{c+c1}{\PYGZsh{} Вычисление карты евклидовых расстояний от каждого пикселя объекта до фона}
+    \PYG{n}{distance} \PYG{o}{=} \PYG{n}{ndimage}\PYG{o}{.}\PYG{n}{distance\PYGZus{}transform\PYGZus{}edt}\PYG{p}{(}\PYG{n}{inverted}\PYG{p}{)}
+
+    \PYG{c+c1}{\PYGZsh{} Поиск локальных максимумов на карте расстояний — это будущие центры пор}
+    \PYG{n}{coords} \PYG{o}{=} \PYG{n}{peak\PYGZus{}local\PYGZus{}max}\PYG{p}{(}\PYG{n}{distance}\PYG{p}{,} \PYG{n}{min\PYGZus{}distance}\PYG{o}{=}\PYG{l+m+mi}{3}\PYG{p}{)}
+    \PYG{c+c1}{\PYGZsh{} Создание маски, где отмечены только локальные максимумы}
+    \PYG{n}{local\PYGZus{}maxima} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{zeros\PYGZus{}like}\PYG{p}{(}\PYG{n}{distance}\PYG{p}{,} \PYG{n}{dtype}\PYG{o}{=}\PYG{n+nb}{bool}\PYG{p}{)}
+    \PYG{n}{local\PYGZus{}maxima}\PYG{p}{[}\PYG{n+nb}{tuple}\PYG{p}{(}\PYG{n}{coords}\PYG{o}{.}\PYG{n}{T}\PYG{p}{)}\PYG{p}{]} \PYG{o}{=} \PYG{k+kc}{True}
+
+    \PYG{c+c1}{\PYGZsh{} Создание карты маркеров, где каждая отдельная область  помечена уникальным целым числом}
+    \PYG{n}{markers} \PYG{o}{=} \PYG{n}{ndimage}\PYG{o}{.}\PYG{n}{label}\PYG{p}{(}\PYG{n}{local\PYGZus{}maxima}\PYG{p}{)}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{]}
+    \PYG{n}{labels} \PYG{o}{=} \PYG{n}{watershed}\PYG{p}{(}\PYG{o}{\PYGZhy{}}\PYG{n}{distance}\PYG{p}{,} \PYG{n}{markers}\PYG{p}{,} \PYG{n}{mask}\PYG{o}{=}\PYG{n}{inverted}\PYG{p}{)}
+
+    \PYG{c+c1}{\PYGZsh{} Создание нового изображения для отрисовки разделенных пор}
+    \PYG{n}{separated\PYGZus{}image} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ones\PYGZus{}like}\PYG{p}{(}\PYG{n}{image}\PYG{p}{)} \PYG{o}{*} \PYG{l+m+mi}{255}
+    \PYG{c+c1}{\PYGZsh{} Отрисовка каждого сегмента на новом изображении}
+    \PYG{k}{for} \PYG{n}{label} \PYG{o+ow}{in} \PYG{n}{np}\PYG{o}{.}\PYG{n}{unique}\PYG{p}{(}\PYG{n}{labels}\PYG{p}{)}\PYG{p}{:}
+        \PYG{k}{if} \PYG{n}{label} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{:}  \PYG{c+c1}{\PYGZsh{} Пропуск фона}
+            \PYG{k}{continue}
+        \PYG{n}{separated\PYGZus{}image}\PYG{p}{[}\PYG{n}{labels} \PYG{o}{==} \PYG{n}{label}\PYG{p}{]} \PYG{o}{=} \PYG{l+m+mi}{0}
+
+    \PYG{c+c1}{\PYGZsh{} Нахождение границ между сегментами с помощью детектора границ Canny}
+    \PYG{n}{edges} \PYG{o}{=} \PYG{n}{cv2}\PYG{o}{.}\PYG{n}{Canny}\PYG{p}{(}\PYG{n}{labels}\PYG{o}{.}\PYG{n}{astype}\PYG{p}{(}\PYG{n}{np}\PYG{o}{.}\PYG{n}{uint8}\PYG{p}{)}\PYG{p}{,} \PYG{l+m+mi}{1}\PYG{p}{,} \PYG{l+m+mi}{2}\PYG{p}{)}
+    \PYG{c+c1}{\PYGZsh{} Стирание границ, чтобы визуально разделить поры}
+    \PYG{n}{separated\PYGZus{}image}\PYG{p}{[}\PYG{n}{edges} \PYG{o}{\PYGZgt{}} \PYG{l+m+mi}{0}\PYG{p}{]} \PYG{o}{=} \PYG{l+m+mi}{255}
+
+    \PYG{k}{return} \PYG{n}{separated\PYGZus{}image}
+\end{MintedVerbatim}

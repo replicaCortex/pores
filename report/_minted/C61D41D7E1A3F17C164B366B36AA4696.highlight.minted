@@ -1,0 +1,333 @@
+\begin{MintedVerbatim}[commandchars=\\\{\}]
+\PYG{l+s+sd}{\PYGZdq{}\PYGZdq{}\PYGZdq{}}
+\PYG{l+s+sd}{Module for generating various types of pores.}
+\PYG{l+s+sd}{\PYGZdq{}\PYGZdq{}\PYGZdq{}}
+\PYG{k+kn}{import}\PYG{+w}{ }\PYG{n+nn}{random}
+\PYG{k+kn}{from}\PYG{+w}{ }\PYG{n+nn}{typing}\PYG{+w}{ }\PYG{k+kn}{import} \PYG{n}{Any}\PYG{p}{,} \PYG{n}{Dict}\PYG{p}{,} \PYG{n}{List}\PYG{p}{,} \PYG{n}{Tuple}
+
+\PYG{k+kn}{import}\PYG{+w}{ }\PYG{n+nn}{cv2}
+\PYG{k+kn}{import}\PYG{+w}{ }\PYG{n+nn}{noise}
+\PYG{k+kn}{import}\PYG{+w}{ }\PYG{n+nn}{numpy}\PYG{+w}{ }\PYG{k}{as}\PYG{+w}{ }\PYG{n+nn}{np}
+\PYG{k+kn}{from}\PYG{+w}{ }\PYG{n+nn}{scipy}\PYG{+w}{ }\PYG{k+kn}{import} \PYG{n}{ndimage}
+\PYG{k+kn}{from}\PYG{+w}{ }\PYG{n+nn}{skimage}\PYG{n+nn}{.}\PYG{n+nn}{feature}\PYG{+w}{ }\PYG{k+kn}{import} \PYG{n}{peak\PYGZus{}local\PYGZus{}max}
+\PYG{k+kn}{from}\PYG{+w}{ }\PYG{n+nn}{skimage}\PYG{n+nn}{.}\PYG{n+nn}{segmentation}\PYG{+w}{ }\PYG{k+kn}{import} \PYG{n}{watershed}
+
+
+\PYG{k}{class}\PYG{+w}{ }\PYG{n+nc}{PoreGenerator}\PYG{p}{:}
+\PYG{+w}{    }\PYG{l+s+sd}{\PYGZdq{}\PYGZdq{}\PYGZdq{}Generates images with various types of simulated pores.\PYGZdq{}\PYGZdq{}\PYGZdq{}}
+
+    \PYG{k}{def}\PYG{+w}{ }\PYG{n+nf+fm}{\PYGZus{}\PYGZus{}init\PYGZus{}\PYGZus{}}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{p}{,} \PYG{n}{config}\PYG{p}{:} \PYG{n}{Dict}\PYG{p}{[}\PYG{n+nb}{str}\PYG{p}{,} \PYG{n}{Any}\PYG{p}{]}\PYG{p}{)}\PYG{p}{:}
+        \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{config} \PYG{o}{=} \PYG{n}{config}
+        \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{width} \PYG{o}{=} \PYG{n}{config}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{image\PYGZus{}settings}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{width}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}
+        \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{height} \PYG{o}{=} \PYG{n}{config}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{image\PYGZus{}settings}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{height}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}
+
+    \PYG{k}{def}\PYG{+w}{ }\PYG{n+nf}{generate\PYGZus{}image}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{p}{)} \PYG{o}{\PYGZhy{}}\PYG{o}{\PYGZgt{}} \PYG{n}{Tuple}\PYG{p}{[}\PYG{n}{np}\PYG{o}{.}\PYG{n}{ndarray}\PYG{p}{,} \PYG{n}{Dict}\PYG{p}{[}\PYG{n+nb}{str}\PYG{p}{,} \PYG{n}{List}\PYG{p}{]}\PYG{p}{]}\PYG{p}{:}
+\PYG{+w}{        }\PYG{l+s+sd}{\PYGZdq{}\PYGZdq{}\PYGZdq{}Generates an image with all configured pore types.\PYGZdq{}\PYGZdq{}\PYGZdq{}}
+        \PYG{n}{image} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ones}\PYG{p}{(}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{height}\PYG{p}{,} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{width}\PYG{p}{)}\PYG{p}{,} \PYG{n}{dtype}\PYG{o}{=}\PYG{n}{np}\PYG{o}{.}\PYG{n}{uint8}\PYG{p}{)} \PYG{o}{*} \PYG{l+m+mi}{255}
+        \PYG{n}{pore\PYGZus{}info} \PYG{o}{=} \PYG{p}{\PYGZob{}}
+            \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{single}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{p}{[}\PYG{p}{]}\PYG{p}{,}
+            \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{weakly\PYGZus{}overlapping}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{p}{[}\PYG{p}{]}\PYG{p}{,}
+            \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{strongly\PYGZus{}overlapping}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{p}{[}\PYG{p}{]}\PYG{p}{,}
+            \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{defective}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{p}{[}\PYG{p}{]}
+        \PYG{p}{\PYGZcb{}}
+
+        \PYG{n}{image} \PYG{o}{=} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{\PYGZus{}add\PYGZus{}single\PYGZus{}pores}\PYG{p}{(}\PYG{n}{image}\PYG{p}{,} \PYG{n}{pore\PYGZus{}info}\PYG{p}{)}
+        \PYG{n}{image} \PYG{o}{=} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{\PYGZus{}add\PYGZus{}weakly\PYGZus{}overlapping\PYGZus{}pores}\PYG{p}{(}\PYG{n}{image}\PYG{p}{,} \PYG{n}{pore\PYGZus{}info}\PYG{p}{)}
+        \PYG{n}{image} \PYG{o}{=} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{\PYGZus{}add\PYGZus{}strongly\PYGZus{}overlapping\PYGZus{}pores}\PYG{p}{(}\PYG{n}{image}\PYG{p}{,} \PYG{n}{pore\PYGZus{}info}\PYG{p}{)}
+        \PYG{n}{image} \PYG{o}{=} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{\PYGZus{}add\PYGZus{}defective\PYGZus{}pores}\PYG{p}{(}\PYG{n}{image}\PYG{p}{,} \PYG{n}{pore\PYGZus{}info}\PYG{p}{)}
+
+        \PYG{k}{return} \PYG{n}{image}\PYG{p}{,} \PYG{n}{pore\PYGZus{}info}
+
+    \PYG{k}{def}\PYG{+w}{ }\PYG{n+nf}{\PYGZus{}create\PYGZus{}elliptical\PYGZus{}pore}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{p}{,} \PYG{n}{radius}\PYG{p}{:} \PYG{n+nb}{int}\PYG{p}{,} \PYG{n}{stretch\PYGZus{}factor}\PYG{p}{:} \PYG{n+nb}{float}\PYG{p}{,} \PYG{n}{angle}\PYG{p}{:} \PYG{n+nb}{float}\PYG{p}{)} \PYG{o}{\PYGZhy{}}\PYG{o}{\PYGZgt{}} \PYG{n}{Tuple}\PYG{p}{[}\PYG{n}{np}\PYG{o}{.}\PYG{n}{ndarray}\PYG{p}{,} \PYG{n+nb}{int}\PYG{p}{]}\PYG{p}{:}
+\PYG{+w}{        }\PYG{l+s+sd}{\PYGZdq{}\PYGZdq{}\PYGZdq{}Creates an elliptical pore on its own canvas.\PYGZdq{}\PYGZdq{}\PYGZdq{}}
+        \PYG{n}{canvas\PYGZus{}size} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n}{radius} \PYG{o}{*} \PYG{l+m+mi}{2} \PYG{o}{*} \PYG{n}{stretch\PYGZus{}factor} \PYG{o}{*} \PYG{l+m+mf}{1.5}\PYG{p}{)}
+        \PYG{n}{canvas} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ones}\PYG{p}{(}\PYG{p}{(}\PYG{n}{canvas\PYGZus{}size}\PYG{p}{,} \PYG{n}{canvas\PYGZus{}size}\PYG{p}{)}\PYG{p}{,} \PYG{n}{dtype}\PYG{o}{=}\PYG{n}{np}\PYG{o}{.}\PYG{n}{uint8}\PYG{p}{)} \PYG{o}{*} \PYG{l+m+mi}{255}
+        \PYG{n}{center} \PYG{o}{=} \PYG{n}{canvas\PYGZus{}size} \PYG{o}{/}\PYG{o}{/} \PYG{l+m+mi}{2}
+
+        \PYG{n}{axes} \PYG{o}{=} \PYG{p}{(}\PYG{n+nb}{int}\PYG{p}{(}\PYG{n}{radius} \PYG{o}{*} \PYG{n}{stretch\PYGZus{}factor}\PYG{p}{)}\PYG{p}{,} \PYG{n}{radius}\PYG{p}{)}
+        \PYG{n}{cv2}\PYG{o}{.}\PYG{n}{ellipse}\PYG{p}{(}\PYG{n}{canvas}\PYG{p}{,} \PYG{p}{(}\PYG{n}{center}\PYG{p}{,} \PYG{n}{center}\PYG{p}{)}\PYG{p}{,} \PYG{n}{axes}\PYG{p}{,} \PYG{n}{angle}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{,} \PYG{l+m+mi}{360}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{,} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{)}
+
+        \PYG{k}{return} \PYG{n}{canvas}\PYG{p}{,} \PYG{n}{center}
+
+    \PYG{k}{def}\PYG{+w}{ }\PYG{n+nf}{\PYGZus{}place\PYGZus{}on\PYGZus{}image}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{p}{,} \PYG{n}{image}\PYG{p}{:} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ndarray}\PYG{p}{,} \PYG{n}{canvas}\PYG{p}{:} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ndarray}\PYG{p}{,} \PYG{n}{canvas\PYGZus{}center}\PYG{p}{:} \PYG{n+nb}{int}\PYG{p}{,} \PYG{n}{x}\PYG{p}{:} \PYG{n+nb}{int}\PYG{p}{,} \PYG{n}{y}\PYG{p}{:} \PYG{n+nb}{int}\PYG{p}{)} \PYG{o}{\PYGZhy{}}\PYG{o}{\PYGZgt{}} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ndarray}\PYG{p}{:}
+\PYG{+w}{        }\PYG{l+s+sd}{\PYGZdq{}\PYGZdq{}\PYGZdq{}Places a pore from its canvas onto the main image, handling boundaries.\PYGZdq{}\PYGZdq{}\PYGZdq{}}
+        \PYG{n}{pore\PYGZus{}height}\PYG{p}{,} \PYG{n}{pore\PYGZus{}width} \PYG{o}{=} \PYG{n}{canvas}\PYG{o}{.}\PYG{n}{shape}
+
+        \PYG{n}{y\PYGZus{}start\PYGZus{}img} \PYG{o}{=} \PYG{n+nb}{max}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{n}{y} \PYG{o}{\PYGZhy{}} \PYG{n}{canvas\PYGZus{}center}\PYG{p}{)}
+        \PYG{n}{y\PYGZus{}end\PYGZus{}img} \PYG{o}{=} \PYG{n+nb}{min}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{height}\PYG{p}{,} \PYG{n}{y} \PYG{o}{\PYGZhy{}} \PYG{n}{canvas\PYGZus{}center} \PYG{o}{+} \PYG{n}{pore\PYGZus{}height}\PYG{p}{)}
+        \PYG{n}{x\PYGZus{}start\PYGZus{}img} \PYG{o}{=} \PYG{n+nb}{max}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{n}{x} \PYG{o}{\PYGZhy{}} \PYG{n}{canvas\PYGZus{}center}\PYG{p}{)}
+        \PYG{n}{x\PYGZus{}end\PYGZus{}img} \PYG{o}{=} \PYG{n+nb}{min}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{width}\PYG{p}{,} \PYG{n}{x} \PYG{o}{\PYGZhy{}} \PYG{n}{canvas\PYGZus{}center} \PYG{o}{+} \PYG{n}{pore\PYGZus{}width}\PYG{p}{)}
+
+        \PYG{n}{y\PYGZus{}start\PYGZus{}pore} \PYG{o}{=} \PYG{n+nb}{max}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{n}{canvas\PYGZus{}center} \PYG{o}{\PYGZhy{}} \PYG{n}{y}\PYG{p}{)}
+        \PYG{n}{y\PYGZus{}end\PYGZus{}pore} \PYG{o}{=} \PYG{n}{y\PYGZus{}start\PYGZus{}pore} \PYG{o}{+} \PYG{p}{(}\PYG{n}{y\PYGZus{}end\PYGZus{}img} \PYG{o}{\PYGZhy{}} \PYG{n}{y\PYGZus{}start\PYGZus{}img}\PYG{p}{)}
+        \PYG{n}{x\PYGZus{}start\PYGZus{}pore} \PYG{o}{=} \PYG{n+nb}{max}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{n}{canvas\PYGZus{}center} \PYG{o}{\PYGZhy{}} \PYG{n}{x}\PYG{p}{)}
+        \PYG{n}{x\PYGZus{}end\PYGZus{}pore} \PYG{o}{=} \PYG{n}{x\PYGZus{}start\PYGZus{}pore} \PYG{o}{+} \PYG{p}{(}\PYG{n}{x\PYGZus{}end\PYGZus{}img} \PYG{o}{\PYGZhy{}} \PYG{n}{x\PYGZus{}start\PYGZus{}img}\PYG{p}{)}
+
+        \PYG{n}{img\PYGZus{}slice} \PYG{o}{=} \PYG{n}{image}\PYG{p}{[}\PYG{n}{y\PYGZus{}start\PYGZus{}img}\PYG{p}{:}\PYG{n}{y\PYGZus{}end\PYGZus{}img}\PYG{p}{,} \PYG{n}{x\PYGZus{}start\PYGZus{}img}\PYG{p}{:}\PYG{n}{x\PYGZus{}end\PYGZus{}img}\PYG{p}{]}
+        \PYG{n}{pore\PYGZus{}slice} \PYG{o}{=} \PYG{n}{canvas}\PYG{p}{[}\PYG{n}{y\PYGZus{}start\PYGZus{}pore}\PYG{p}{:}\PYG{n}{y\PYGZus{}end\PYGZus{}pore}\PYG{p}{,} \PYG{n}{x\PYGZus{}start\PYGZus{}pore}\PYG{p}{:}\PYG{n}{x\PYGZus{}end\PYGZus{}pore}\PYG{p}{]}
+
+        \PYG{n}{image}\PYG{p}{[}\PYG{n}{y\PYGZus{}start\PYGZus{}img}\PYG{p}{:}\PYG{n}{y\PYGZus{}end\PYGZus{}img}\PYG{p}{,} \PYG{n}{x\PYGZus{}start\PYGZus{}img}\PYG{p}{:}\PYG{n}{x\PYGZus{}end\PYGZus{}img}\PYG{p}{]} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{minimum}\PYG{p}{(}\PYG{n}{img\PYGZus{}slice}\PYG{p}{,} \PYG{n}{pore\PYGZus{}slice}\PYG{p}{)}
+
+        \PYG{k}{return} \PYG{n}{image}
+
+    \PYG{k}{def}\PYG{+w}{ }\PYG{n+nf}{\PYGZus{}add\PYGZus{}single\PYGZus{}pores}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{p}{,} \PYG{n}{image}\PYG{p}{:} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ndarray}\PYG{p}{,} \PYG{n}{pore\PYGZus{}info}\PYG{p}{:} \PYG{n}{Dict}\PYG{p}{[}\PYG{n+nb}{str}\PYG{p}{,} \PYG{n}{List}\PYG{p}{]}\PYG{p}{)} \PYG{o}{\PYGZhy{}}\PYG{o}{\PYGZgt{}} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ndarray}\PYG{p}{:}
+\PYG{+w}{        }\PYG{l+s+sd}{\PYGZdq{}\PYGZdq{}\PYGZdq{}Adds single, non\PYGZhy{}overlapping pores to the image.\PYGZdq{}\PYGZdq{}\PYGZdq{}}
+        \PYG{n}{settings} \PYG{o}{=} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{config}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{pore\PYGZus{}settings}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{single\PYGZus{}pores}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}
+        \PYG{n}{count} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{randint}\PYG{p}{(}\PYG{o}{*}\PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{count\PYGZus{}range}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{)}
+
+        \PYG{k}{for} \PYG{n}{\PYGZus{}} \PYG{o+ow}{in} \PYG{n+nb}{range}\PYG{p}{(}\PYG{n}{count}\PYG{p}{)}\PYG{p}{:}
+            \PYG{n}{radius} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{random}\PYG{o}{.}\PYG{n}{normal}\PYG{p}{(}\PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{radius\PYGZus{}mean}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{,} \PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{radius\PYGZus{}std}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{)}
+            \PYG{n}{radius} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n}{np}\PYG{o}{.}\PYG{n}{clip}\PYG{p}{(}\PYG{n}{radius}\PYG{p}{,} \PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{min\PYGZus{}radius}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{,} \PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{max\PYGZus{}radius}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{)}\PYG{p}{)}
+
+            \PYG{n}{stretch\PYGZus{}factor} \PYG{o}{=} \PYG{l+m+mf}{1.0}
+            \PYG{n}{angle} \PYG{o}{=} \PYG{l+m+mf}{0.0}
+            \PYG{k}{if} \PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{stretch\PYGZus{}enabled}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{:}
+                \PYG{n}{stretch\PYGZus{}factor} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{uniform}\PYG{p}{(}\PYG{o}{*}\PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{stretch\PYGZus{}factor\PYGZus{}range}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{)}
+                \PYG{k}{if} \PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{rotation\PYGZus{}enabled}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{:}
+                    \PYG{n}{angle} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{uniform}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{l+m+mi}{180}\PYG{p}{)}
+
+            \PYG{n}{effective\PYGZus{}radius} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n}{radius} \PYG{o}{*} \PYG{n}{stretch\PYGZus{}factor}\PYG{p}{)}
+            \PYG{k}{if} \PYG{n}{stretch\PYGZus{}factor} \PYG{o}{\PYGZgt{}} \PYG{l+m+mf}{1.0}\PYG{p}{:}
+                \PYG{n}{pore\PYGZus{}canvas}\PYG{p}{,} \PYG{n}{center} \PYG{o}{=} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{\PYGZus{}create\PYGZus{}elliptical\PYGZus{}pore}\PYG{p}{(}\PYG{n}{radius}\PYG{p}{,} \PYG{n}{stretch\PYGZus{}factor}\PYG{p}{,} \PYG{n}{angle}\PYG{p}{)}
+            \PYG{k}{else}\PYG{p}{:}
+                \PYG{n}{canvas\PYGZus{}size} \PYG{o}{=} \PYG{n}{radius} \PYG{o}{*} \PYG{l+m+mi}{2} \PYG{o}{+} \PYG{l+m+mi}{1}
+                \PYG{n}{pore\PYGZus{}canvas} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ones}\PYG{p}{(}\PYG{p}{(}\PYG{n}{canvas\PYGZus{}size}\PYG{p}{,} \PYG{n}{canvas\PYGZus{}size}\PYG{p}{)}\PYG{p}{,} \PYG{n}{dtype}\PYG{o}{=}\PYG{n}{np}\PYG{o}{.}\PYG{n}{uint8}\PYG{p}{)} \PYG{o}{*} \PYG{l+m+mi}{255}
+                \PYG{n}{cv2}\PYG{o}{.}\PYG{n}{circle}\PYG{p}{(}\PYG{n}{pore\PYGZus{}canvas}\PYG{p}{,} \PYG{p}{(}\PYG{n}{radius}\PYG{p}{,} \PYG{n}{radius}\PYG{p}{)}\PYG{p}{,} \PYG{n}{radius}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{,} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{)}
+                \PYG{n}{center} \PYG{o}{=} \PYG{n}{radius}
+
+            \PYG{n}{placed} \PYG{o}{=} \PYG{k+kc}{False}
+            \PYG{k}{for} \PYG{n}{\PYGZus{}} \PYG{o+ow}{in} \PYG{n+nb}{range}\PYG{p}{(}\PYG{l+m+mi}{100}\PYG{p}{)}\PYG{p}{:}  \PYG{c+c1}{\PYGZsh{} Max attempts}
+                \PYG{n}{x} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{randint}\PYG{p}{(}\PYG{n}{effective\PYGZus{}radius}\PYG{p}{,} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{width} \PYG{o}{\PYGZhy{}} \PYG{n}{effective\PYGZus{}radius}\PYG{p}{)}
+                \PYG{n}{y} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{randint}\PYG{p}{(}\PYG{n}{effective\PYGZus{}radius}\PYG{p}{,} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{height} \PYG{o}{\PYGZhy{}} \PYG{n}{effective\PYGZus{}radius}\PYG{p}{)}
+
+                \PYG{k}{if} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{\PYGZus{}is\PYGZus{}area\PYGZus{}free}\PYG{p}{(}\PYG{n}{image}\PYG{p}{,} \PYG{n}{x}\PYG{p}{,} \PYG{n}{y}\PYG{p}{,} \PYG{n}{effective\PYGZus{}radius}\PYG{p}{)}\PYG{p}{:}
+                    \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{\PYGZus{}place\PYGZus{}on\PYGZus{}image}\PYG{p}{(}\PYG{n}{image}\PYG{p}{,} \PYG{n}{pore\PYGZus{}canvas}\PYG{p}{,} \PYG{n}{center}\PYG{p}{,} \PYG{n}{x}\PYG{p}{,} \PYG{n}{y}\PYG{p}{)}
+                    \PYG{n}{pore\PYGZus{}info}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{single}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{o}{.}\PYG{n}{append}\PYG{p}{(}\PYG{p}{\PYGZob{}}
+                        \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{x}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{n}{x}\PYG{p}{,} \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{y}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{n}{y}\PYG{p}{,} \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{radius}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{n}{radius}\PYG{p}{,}
+                        \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{stretch\PYGZus{}factor}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{n}{stretch\PYGZus{}factor}\PYG{p}{,} \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{angle}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{n}{angle}
+                    \PYG{p}{\PYGZcb{}}\PYG{p}{)}
+                    \PYG{n}{placed} \PYG{o}{=} \PYG{k+kc}{True}
+                    \PYG{k}{break}
+        \PYG{k}{return} \PYG{n}{image}
+
+    \PYG{k}{def}\PYG{+w}{ }\PYG{n+nf}{\PYGZus{}add\PYGZus{}weakly\PYGZus{}overlapping\PYGZus{}pores}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{p}{,} \PYG{n}{image}\PYG{p}{:} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ndarray}\PYG{p}{,} \PYG{n}{pore\PYGZus{}info}\PYG{p}{:} \PYG{n}{Dict}\PYG{p}{[}\PYG{n+nb}{str}\PYG{p}{,} \PYG{n}{List}\PYG{p}{]}\PYG{p}{)} \PYG{o}{\PYGZhy{}}\PYG{o}{\PYGZgt{}} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ndarray}\PYG{p}{:}
+\PYG{+w}{        }\PYG{l+s+sd}{\PYGZdq{}\PYGZdq{}\PYGZdq{}Adds groups of weakly overlapping pores, separated by the watershed algorithm.\PYGZdq{}\PYGZdq{}\PYGZdq{}}
+        \PYG{n}{settings} \PYG{o}{=} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{config}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{pore\PYGZus{}settings}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{weakly\PYGZus{}overlapping}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}
+        \PYG{n}{group\PYGZus{}count} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{randint}\PYG{p}{(}\PYG{o}{*}\PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{count\PYGZus{}range}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{)}
+
+        \PYG{k}{for} \PYG{n}{\PYGZus{}} \PYG{o+ow}{in} \PYG{n+nb}{range}\PYG{p}{(}\PYG{n}{group\PYGZus{}count}\PYG{p}{)}\PYG{p}{:}
+            \PYG{n}{temp\PYGZus{}image} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ones}\PYG{p}{(}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{height}\PYG{p}{,} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{width}\PYG{p}{)}\PYG{p}{,} \PYG{n}{dtype}\PYG{o}{=}\PYG{n}{np}\PYG{o}{.}\PYG{n}{uint8}\PYG{p}{)} \PYG{o}{*} \PYG{l+m+mi}{255}
+            \PYG{n}{pore\PYGZus{}count} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{randint}\PYG{p}{(}\PYG{l+m+mi}{2}\PYG{p}{,} \PYG{l+m+mi}{3}\PYG{p}{)}
+            \PYG{n}{group\PYGZus{}details} \PYG{o}{=} \PYG{p}{\PYGZob{}}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{centers}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{p}{[}\PYG{p}{]}\PYG{p}{,} \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{radii}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{p}{[}\PYG{p}{]}\PYG{p}{,} \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{stretch\PYGZus{}factors}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{p}{[}\PYG{p}{]}\PYG{p}{,} \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{angles}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{p}{[}\PYG{p}{]}\PYG{p}{\PYGZcb{}}
+
+            \PYG{k}{for} \PYG{n}{i} \PYG{o+ow}{in} \PYG{n+nb}{range}\PYG{p}{(}\PYG{n}{pore\PYGZus{}count}\PYG{p}{)}\PYG{p}{:}
+                \PYG{n}{radius} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n}{np}\PYG{o}{.}\PYG{n}{clip}\PYG{p}{(}\PYG{n}{np}\PYG{o}{.}\PYG{n}{random}\PYG{o}{.}\PYG{n}{normal}\PYG{p}{(}\PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{radius\PYGZus{}mean}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{,} \PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{radius\PYGZus{}std}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{)}\PYG{p}{,} \PYG{l+m+mi}{5}\PYG{p}{,} \PYG{l+m+mi}{25}\PYG{p}{)}\PYG{p}{)}
+
+                \PYG{n}{stretch\PYGZus{}factor} \PYG{o}{=} \PYG{l+m+mf}{1.0}
+                \PYG{n}{angle} \PYG{o}{=} \PYG{l+m+mf}{0.0}
+                \PYG{k}{if} \PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{stretch\PYGZus{}enabled}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{:}
+                    \PYG{n}{stretch\PYGZus{}factor} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{uniform}\PYG{p}{(}\PYG{o}{*}\PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{stretch\PYGZus{}factor\PYGZus{}range}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{)}
+                    \PYG{k}{if} \PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{rotation\PYGZus{}enabled}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{:}
+                        \PYG{n}{angle} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{uniform}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{l+m+mi}{180}\PYG{p}{)}
+
+                \PYG{n}{effective\PYGZus{}radius} \PYG{o}{=} \PYG{n}{radius} \PYG{o}{*} \PYG{n}{stretch\PYGZus{}factor}
+                \PYG{n}{margin} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n}{np}\PYG{o}{.}\PYG{n}{ceil}\PYG{p}{(}\PYG{n}{effective\PYGZus{}radius}\PYG{p}{)}\PYG{p}{)}
+
+                \PYG{k}{if} \PYG{n}{i} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{:}
+                    \PYG{n}{x} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{randint}\PYG{p}{(}\PYG{n}{margin}\PYG{p}{,} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{width} \PYG{o}{\PYGZhy{}} \PYG{n}{margin}\PYG{p}{)}
+                    \PYG{n}{y} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{randint}\PYG{p}{(}\PYG{n}{margin}\PYG{p}{,} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{height} \PYG{o}{\PYGZhy{}} \PYG{n}{margin}\PYG{p}{)}
+                \PYG{k}{else}\PYG{p}{:}
+                    \PYG{n}{overlap\PYGZus{}percent} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{uniform}\PYG{p}{(}\PYG{o}{*}\PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{overlap\PYGZus{}percentage\PYGZus{}range}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{)}
+                    \PYG{n}{prev\PYGZus{}x}\PYG{p}{,} \PYG{n}{prev\PYGZus{}y} \PYG{o}{=} \PYG{n}{group\PYGZus{}details}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{centers}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{[}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{]}
+                    \PYG{n}{prev\PYGZus{}radius} \PYG{o}{=} \PYG{n}{group\PYGZus{}details}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{radii}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{[}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{]}
+                    \PYG{n}{prev\PYGZus{}stretch} \PYG{o}{=} \PYG{n}{group\PYGZus{}details}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{stretch\PYGZus{}factors}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{[}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{]}
+
+                    \PYG{n}{effective\PYGZus{}prev\PYGZus{}radius} \PYG{o}{=} \PYG{n}{prev\PYGZus{}radius} \PYG{o}{*} \PYG{n}{prev\PYGZus{}stretch}
+                    \PYG{n}{distance} \PYG{o}{=} \PYG{p}{(}\PYG{n}{effective\PYGZus{}prev\PYGZus{}radius} \PYG{o}{+} \PYG{n}{effective\PYGZus{}radius}\PYG{p}{)} \PYG{o}{*} \PYG{p}{(}\PYG{l+m+mi}{1} \PYG{o}{\PYGZhy{}} \PYG{n}{overlap\PYGZus{}percent}\PYG{p}{)}
+                    \PYG{n}{direction\PYGZus{}angle} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{uniform}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{l+m+mi}{2} \PYG{o}{*} \PYG{n}{np}\PYG{o}{.}\PYG{n}{pi}\PYG{p}{)}
+
+                    \PYG{n}{x} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n}{prev\PYGZus{}x} \PYG{o}{+} \PYG{n}{distance} \PYG{o}{*} \PYG{n}{np}\PYG{o}{.}\PYG{n}{cos}\PYG{p}{(}\PYG{n}{direction\PYGZus{}angle}\PYG{p}{)}\PYG{p}{)}
+                    \PYG{n}{y} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n}{prev\PYGZus{}y} \PYG{o}{+} \PYG{n}{distance} \PYG{o}{*} \PYG{n}{np}\PYG{o}{.}\PYG{n}{sin}\PYG{p}{(}\PYG{n}{direction\PYGZus{}angle}\PYG{p}{)}\PYG{p}{)}
+
+                \PYG{n}{x} \PYG{o}{=} \PYG{n+nb}{max}\PYG{p}{(}\PYG{n}{margin}\PYG{p}{,} \PYG{n+nb}{min}\PYG{p}{(}\PYG{n}{x}\PYG{p}{,} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{width} \PYG{o}{\PYGZhy{}} \PYG{n}{margin}\PYG{p}{)}\PYG{p}{)}
+                \PYG{n}{y} \PYG{o}{=} \PYG{n+nb}{max}\PYG{p}{(}\PYG{n}{margin}\PYG{p}{,} \PYG{n+nb}{min}\PYG{p}{(}\PYG{n}{y}\PYG{p}{,} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{height} \PYG{o}{\PYGZhy{}} \PYG{n}{margin}\PYG{p}{)}\PYG{p}{)}
+
+                \PYG{k}{if} \PYG{n}{stretch\PYGZus{}factor} \PYG{o}{\PYGZgt{}} \PYG{l+m+mf}{1.0}\PYG{p}{:}
+                    \PYG{n}{pore\PYGZus{}canvas}\PYG{p}{,} \PYG{n}{center} \PYG{o}{=} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{\PYGZus{}create\PYGZus{}elliptical\PYGZus{}pore}\PYG{p}{(}\PYG{n}{radius}\PYG{p}{,} \PYG{n}{stretch\PYGZus{}factor}\PYG{p}{,} \PYG{n}{angle}\PYG{p}{)}
+                    \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{\PYGZus{}place\PYGZus{}on\PYGZus{}image}\PYG{p}{(}\PYG{n}{temp\PYGZus{}image}\PYG{p}{,} \PYG{n}{pore\PYGZus{}canvas}\PYG{p}{,} \PYG{n}{center}\PYG{p}{,} \PYG{n}{x}\PYG{p}{,} \PYG{n}{y}\PYG{p}{)}
+                \PYG{k}{else}\PYG{p}{:}
+                    \PYG{n}{cv2}\PYG{o}{.}\PYG{n}{circle}\PYG{p}{(}\PYG{n}{temp\PYGZus{}image}\PYG{p}{,} \PYG{p}{(}\PYG{n}{x}\PYG{p}{,} \PYG{n}{y}\PYG{p}{)}\PYG{p}{,} \PYG{n}{radius}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{,} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{)}
+
+                \PYG{n}{group\PYGZus{}details}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{centers}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{o}{.}\PYG{n}{append}\PYG{p}{(}\PYG{p}{(}\PYG{n}{x}\PYG{p}{,} \PYG{n}{y}\PYG{p}{)}\PYG{p}{)}
+                \PYG{n}{group\PYGZus{}details}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{radii}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{o}{.}\PYG{n}{append}\PYG{p}{(}\PYG{n}{radius}\PYG{p}{)}
+                \PYG{n}{group\PYGZus{}details}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{stretch\PYGZus{}factors}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{o}{.}\PYG{n}{append}\PYG{p}{(}\PYG{n}{stretch\PYGZus{}factor}\PYG{p}{)}
+                \PYG{n}{group\PYGZus{}details}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{angles}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{o}{.}\PYG{n}{append}\PYG{p}{(}\PYG{n}{angle}\PYG{p}{)}
+
+            \PYG{n}{separated\PYGZus{}image} \PYG{o}{=} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{\PYGZus{}apply\PYGZus{}watershed}\PYG{p}{(}\PYG{n}{temp\PYGZus{}image}\PYG{p}{)}
+            \PYG{n}{image} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{minimum}\PYG{p}{(}\PYG{n}{image}\PYG{p}{,} \PYG{n}{separated\PYGZus{}image}\PYG{p}{)}
+            \PYG{n}{pore\PYGZus{}info}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{weakly\PYGZus{}overlapping}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{o}{.}\PYG{n}{append}\PYG{p}{(}\PYG{n}{group\PYGZus{}details}\PYG{p}{)}
+
+        \PYG{k}{return} \PYG{n}{image}
+
+    \PYG{k}{def}\PYG{+w}{ }\PYG{n+nf}{\PYGZus{}add\PYGZus{}strongly\PYGZus{}overlapping\PYGZus{}pores}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{p}{,} \PYG{n}{image}\PYG{p}{:} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ndarray}\PYG{p}{,} \PYG{n}{pore\PYGZus{}info}\PYG{p}{:} \PYG{n}{Dict}\PYG{p}{[}\PYG{n+nb}{str}\PYG{p}{,} \PYG{n}{List}\PYG{p}{]}\PYG{p}{)} \PYG{o}{\PYGZhy{}}\PYG{o}{\PYGZgt{}} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ndarray}\PYG{p}{:}
+\PYG{+w}{        }\PYG{l+s+sd}{\PYGZdq{}\PYGZdq{}\PYGZdq{}Adds groups of strongly overlapping (merged) pores.\PYGZdq{}\PYGZdq{}\PYGZdq{}}
+        \PYG{n}{settings} \PYG{o}{=} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{config}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{pore\PYGZus{}settings}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{strongly\PYGZus{}overlapping}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}
+        \PYG{n}{group\PYGZus{}count} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{randint}\PYG{p}{(}\PYG{o}{*}\PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{count\PYGZus{}range}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{)}
+
+        \PYG{k}{for} \PYG{n}{\PYGZus{}} \PYG{o+ow}{in} \PYG{n+nb}{range}\PYG{p}{(}\PYG{n}{group\PYGZus{}count}\PYG{p}{)}\PYG{p}{:}
+            \PYG{n}{pore\PYGZus{}count} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{randint}\PYG{p}{(}\PYG{l+m+mi}{2}\PYG{p}{,} \PYG{l+m+mi}{4}\PYG{p}{)}
+            \PYG{n}{group\PYGZus{}details} \PYG{o}{=} \PYG{p}{\PYGZob{}}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{centers}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{p}{[}\PYG{p}{]}\PYG{p}{,} \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{radii}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{p}{[}\PYG{p}{]}\PYG{p}{,} \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{stretch\PYGZus{}factors}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{p}{[}\PYG{p}{]}\PYG{p}{,} \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{angles}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{p}{[}\PYG{p}{]}\PYG{p}{\PYGZcb{}}
+
+            \PYG{k}{for} \PYG{n}{i} \PYG{o+ow}{in} \PYG{n+nb}{range}\PYG{p}{(}\PYG{n}{pore\PYGZus{}count}\PYG{p}{)}\PYG{p}{:}
+                \PYG{n}{radius} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n}{np}\PYG{o}{.}\PYG{n}{clip}\PYG{p}{(}\PYG{n}{np}\PYG{o}{.}\PYG{n}{random}\PYG{o}{.}\PYG{n}{normal}\PYG{p}{(}\PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{radius\PYGZus{}mean}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{,} \PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{radius\PYGZus{}std}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{)}\PYG{p}{,} \PYG{l+m+mi}{5}\PYG{p}{,} \PYG{l+m+mi}{20}\PYG{p}{)}\PYG{p}{)}
+
+                \PYG{n}{stretch\PYGZus{}factor} \PYG{o}{=} \PYG{l+m+mf}{1.0}
+                \PYG{n}{angle} \PYG{o}{=} \PYG{l+m+mf}{0.0}
+                \PYG{k}{if} \PYG{n}{settings}\PYG{o}{.}\PYG{n}{get}\PYG{p}{(}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{stretch\PYGZus{}enabled}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{,} \PYG{k+kc}{False}\PYG{p}{)}\PYG{p}{:}
+                    \PYG{n}{stretch\PYGZus{}factor} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{uniform}\PYG{p}{(}\PYG{o}{*}\PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{stretch\PYGZus{}factor\PYGZus{}range}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{)}
+                    \PYG{k}{if} \PYG{n}{settings}\PYG{o}{.}\PYG{n}{get}\PYG{p}{(}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{rotation\PYGZus{}enabled}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{,} \PYG{k+kc}{False}\PYG{p}{)}\PYG{p}{:}
+                        \PYG{n}{angle} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{uniform}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{l+m+mi}{180}\PYG{p}{)}
+
+                \PYG{n}{effective\PYGZus{}radius} \PYG{o}{=} \PYG{n}{radius} \PYG{o}{*} \PYG{n}{stretch\PYGZus{}factor}
+                \PYG{n}{margin} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n}{np}\PYG{o}{.}\PYG{n}{ceil}\PYG{p}{(}\PYG{n}{effective\PYGZus{}radius}\PYG{p}{)}\PYG{p}{)}
+
+                \PYG{k}{if} \PYG{n}{i} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{:}
+                    \PYG{n}{x} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{randint}\PYG{p}{(}\PYG{n}{margin}\PYG{p}{,} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{width} \PYG{o}{\PYGZhy{}} \PYG{n}{margin}\PYG{p}{)}
+                    \PYG{n}{y} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{randint}\PYG{p}{(}\PYG{n}{margin}\PYG{p}{,} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{height} \PYG{o}{\PYGZhy{}} \PYG{n}{margin}\PYG{p}{)}
+                \PYG{k}{else}\PYG{p}{:}
+                    \PYG{n}{overlap\PYGZus{}percent} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{uniform}\PYG{p}{(}\PYG{o}{*}\PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{overlap\PYGZus{}percentage\PYGZus{}range}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{)}
+                    \PYG{n}{prev\PYGZus{}x}\PYG{p}{,} \PYG{n}{prev\PYGZus{}y} \PYG{o}{=} \PYG{n}{group\PYGZus{}details}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{centers}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{[}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{]}
+                    \PYG{n}{prev\PYGZus{}radius} \PYG{o}{=} \PYG{n}{group\PYGZus{}details}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{radii}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{[}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{]}
+                    \PYG{n}{prev\PYGZus{}stretch} \PYG{o}{=} \PYG{n}{group\PYGZus{}details}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{stretch\PYGZus{}factors}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{[}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{]}
+
+                    \PYG{n}{effective\PYGZus{}prev\PYGZus{}radius} \PYG{o}{=} \PYG{n}{prev\PYGZus{}radius} \PYG{o}{*} \PYG{n}{prev\PYGZus{}stretch}
+                    \PYG{n}{distance} \PYG{o}{=} \PYG{p}{(}\PYG{n}{effective\PYGZus{}prev\PYGZus{}radius} \PYG{o}{+} \PYG{n}{effective\PYGZus{}radius}\PYG{p}{)} \PYG{o}{*} \PYG{p}{(}\PYG{l+m+mi}{1} \PYG{o}{\PYGZhy{}} \PYG{n}{overlap\PYGZus{}percent}\PYG{p}{)}
+                    \PYG{n}{direction\PYGZus{}angle} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{uniform}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{l+m+mi}{2} \PYG{o}{*} \PYG{n}{np}\PYG{o}{.}\PYG{n}{pi}\PYG{p}{)}
+
+                    \PYG{n}{x} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n}{prev\PYGZus{}x} \PYG{o}{+} \PYG{n}{distance} \PYG{o}{*} \PYG{n}{np}\PYG{o}{.}\PYG{n}{cos}\PYG{p}{(}\PYG{n}{direction\PYGZus{}angle}\PYG{p}{)}\PYG{p}{)}
+                    \PYG{n}{y} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n}{prev\PYGZus{}y} \PYG{o}{+} \PYG{n}{distance} \PYG{o}{*} \PYG{n}{np}\PYG{o}{.}\PYG{n}{sin}\PYG{p}{(}\PYG{n}{direction\PYGZus{}angle}\PYG{p}{)}\PYG{p}{)}
+
+                \PYG{n}{x} \PYG{o}{=} \PYG{n+nb}{max}\PYG{p}{(}\PYG{n}{margin}\PYG{p}{,} \PYG{n+nb}{min}\PYG{p}{(}\PYG{n}{x}\PYG{p}{,} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{width} \PYG{o}{\PYGZhy{}} \PYG{n}{margin}\PYG{p}{)}\PYG{p}{)}
+                \PYG{n}{y} \PYG{o}{=} \PYG{n+nb}{max}\PYG{p}{(}\PYG{n}{margin}\PYG{p}{,} \PYG{n+nb}{min}\PYG{p}{(}\PYG{n}{y}\PYG{p}{,} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{height} \PYG{o}{\PYGZhy{}} \PYG{n}{margin}\PYG{p}{)}\PYG{p}{)}
+
+                \PYG{k}{if} \PYG{n}{stretch\PYGZus{}factor} \PYG{o}{\PYGZgt{}} \PYG{l+m+mf}{1.0}\PYG{p}{:}
+                    \PYG{n}{pore\PYGZus{}canvas}\PYG{p}{,} \PYG{n}{center} \PYG{o}{=} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{\PYGZus{}create\PYGZus{}elliptical\PYGZus{}pore}\PYG{p}{(}\PYG{n}{radius}\PYG{p}{,} \PYG{n}{stretch\PYGZus{}factor}\PYG{p}{,} \PYG{n}{angle}\PYG{p}{)}
+                    \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{\PYGZus{}place\PYGZus{}on\PYGZus{}image}\PYG{p}{(}\PYG{n}{image}\PYG{p}{,} \PYG{n}{pore\PYGZus{}canvas}\PYG{p}{,} \PYG{n}{center}\PYG{p}{,} \PYG{n}{x}\PYG{p}{,} \PYG{n}{y}\PYG{p}{)}
+                \PYG{k}{else}\PYG{p}{:}
+                    \PYG{n}{cv2}\PYG{o}{.}\PYG{n}{circle}\PYG{p}{(}\PYG{n}{image}\PYG{p}{,} \PYG{p}{(}\PYG{n}{x}\PYG{p}{,} \PYG{n}{y}\PYG{p}{)}\PYG{p}{,} \PYG{n}{radius}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{,} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{)}
+
+                \PYG{n}{group\PYGZus{}details}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{centers}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{o}{.}\PYG{n}{append}\PYG{p}{(}\PYG{p}{(}\PYG{n}{x}\PYG{p}{,} \PYG{n}{y}\PYG{p}{)}\PYG{p}{)}
+                \PYG{n}{group\PYGZus{}details}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{radii}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{o}{.}\PYG{n}{append}\PYG{p}{(}\PYG{n}{radius}\PYG{p}{)}
+                \PYG{n}{group\PYGZus{}details}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{stretch\PYGZus{}factors}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{o}{.}\PYG{n}{append}\PYG{p}{(}\PYG{n}{stretch\PYGZus{}factor}\PYG{p}{)}
+                \PYG{n}{group\PYGZus{}details}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{angles}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{o}{.}\PYG{n}{append}\PYG{p}{(}\PYG{n}{angle}\PYG{p}{)}
+
+            \PYG{n}{pore\PYGZus{}info}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{strongly\PYGZus{}overlapping}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{o}{.}\PYG{n}{append}\PYG{p}{(}\PYG{n}{group\PYGZus{}details}\PYG{p}{)}
+
+        \PYG{k}{return} \PYG{n}{image}
+
+    \PYG{k}{def}\PYG{+w}{ }\PYG{n+nf}{\PYGZus{}add\PYGZus{}defective\PYGZus{}pores}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{p}{,} \PYG{n}{image}\PYG{p}{:} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ndarray}\PYG{p}{,} \PYG{n}{pore\PYGZus{}info}\PYG{p}{:} \PYG{n}{Dict}\PYG{p}{[}\PYG{n+nb}{str}\PYG{p}{,} \PYG{n}{List}\PYG{p}{]}\PYG{p}{)} \PYG{o}{\PYGZhy{}}\PYG{o}{\PYGZgt{}} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ndarray}\PYG{p}{:}
+\PYG{+w}{        }\PYG{l+s+sd}{\PYGZdq{}\PYGZdq{}\PYGZdq{}Adds irregularly shaped defective pores.\PYGZdq{}\PYGZdq{}\PYGZdq{}}
+        \PYG{n}{settings} \PYG{o}{=} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{config}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{pore\PYGZus{}settings}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{defective\PYGZus{}pores}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}
+        \PYG{n}{count} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{randint}\PYG{p}{(}\PYG{o}{*}\PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{count\PYGZus{}range}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{)}
+
+        \PYG{k}{for} \PYG{n}{\PYGZus{}} \PYG{o+ow}{in} \PYG{n+nb}{range}\PYG{p}{(}\PYG{n}{count}\PYG{p}{)}\PYG{p}{:}
+            \PYG{n}{radius} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n}{np}\PYG{o}{.}\PYG{n}{clip}\PYG{p}{(}\PYG{n}{np}\PYG{o}{.}\PYG{n}{random}\PYG{o}{.}\PYG{n}{normal}\PYG{p}{(}\PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{radius\PYGZus{}mean}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{,} \PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{radius\PYGZus{}std}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{)}\PYG{p}{,} \PYG{l+m+mi}{10}\PYG{p}{,} \PYG{l+m+mi}{30}\PYG{p}{)}\PYG{p}{)}
+
+            \PYG{n}{stretch\PYGZus{}factor} \PYG{o}{=} \PYG{l+m+mf}{1.0}
+            \PYG{n}{angle} \PYG{o}{=} \PYG{l+m+mf}{0.0}
+            \PYG{k}{if} \PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{stretch\PYGZus{}enabled}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{:}
+                \PYG{n}{stretch\PYGZus{}factor} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{uniform}\PYG{p}{(}\PYG{o}{*}\PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{stretch\PYGZus{}factor\PYGZus{}range}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{)}
+                \PYG{k}{if} \PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{rotation\PYGZus{}enabled}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{:}
+                    \PYG{n}{angle} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{uniform}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{l+m+mi}{180}\PYG{p}{)}
+
+            \PYG{n}{x} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{randint}\PYG{p}{(}\PYG{n}{radius} \PYG{o}{*} \PYG{l+m+mi}{2}\PYG{p}{,} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{width} \PYG{o}{\PYGZhy{}} \PYG{n}{radius} \PYG{o}{*} \PYG{l+m+mi}{2}\PYG{p}{)}
+            \PYG{n}{y} \PYG{o}{=} \PYG{n}{random}\PYG{o}{.}\PYG{n}{randint}\PYG{p}{(}\PYG{n}{radius} \PYG{o}{*} \PYG{l+m+mi}{2}\PYG{p}{,} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{height} \PYG{o}{\PYGZhy{}} \PYG{n}{radius} \PYG{o}{*} \PYG{l+m+mi}{2}\PYG{p}{)}
+
+            \PYG{n}{defective\PYGZus{}pore\PYGZus{}canvas} \PYG{o}{=} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{\PYGZus{}create\PYGZus{}defective\PYGZus{}pore}\PYG{p}{(}
+                \PYG{n}{radius}\PYG{p}{,} \PYG{n}{settings}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{deformation\PYGZus{}factor}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{p}{,} \PYG{n}{stretch\PYGZus{}factor}\PYG{p}{,} \PYG{n}{angle}
+            \PYG{p}{)}
+
+            \PYG{n}{pore\PYGZus{}h}\PYG{p}{,} \PYG{n}{pore\PYGZus{}w} \PYG{o}{=} \PYG{n}{defective\PYGZus{}pore\PYGZus{}canvas}\PYG{o}{.}\PYG{n}{shape}
+            \PYG{n}{center} \PYG{o}{=} \PYG{n+nb}{max}\PYG{p}{(}\PYG{n}{pore\PYGZus{}h}\PYG{p}{,} \PYG{n}{pore\PYGZus{}w}\PYG{p}{)} \PYG{o}{/}\PYG{o}{/} \PYG{l+m+mi}{2}
+            \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{\PYGZus{}place\PYGZus{}on\PYGZus{}image}\PYG{p}{(}\PYG{n}{image}\PYG{p}{,} \PYG{n}{defective\PYGZus{}pore\PYGZus{}canvas}\PYG{p}{,} \PYG{n}{center}\PYG{p}{,} \PYG{n}{x}\PYG{p}{,} \PYG{n}{y}\PYG{p}{)}
+
+            \PYG{n}{pore\PYGZus{}info}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{defective}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{]}\PYG{o}{.}\PYG{n}{append}\PYG{p}{(}\PYG{p}{\PYGZob{}}
+                \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{x}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{n}{x}\PYG{p}{,} \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{y}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{n}{y}\PYG{p}{,} \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{radius}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{n}{radius}\PYG{p}{,}
+                \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{stretch\PYGZus{}factor}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{n}{stretch\PYGZus{}factor}\PYG{p}{,} \PYG{l+s+s1}{\PYGZsq{}}\PYG{l+s+s1}{angle}\PYG{l+s+s1}{\PYGZsq{}}\PYG{p}{:} \PYG{n}{angle}
+            \PYG{p}{\PYGZcb{}}\PYG{p}{)}
+
+        \PYG{k}{return} \PYG{n}{image}
+
+    \PYG{k}{def}\PYG{+w}{ }\PYG{n+nf}{\PYGZus{}is\PYGZus{}area\PYGZus{}free}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{p}{,} \PYG{n}{image}\PYG{p}{:} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ndarray}\PYG{p}{,} \PYG{n}{x}\PYG{p}{:} \PYG{n+nb}{int}\PYG{p}{,} \PYG{n}{y}\PYG{p}{:} \PYG{n+nb}{int}\PYG{p}{,} \PYG{n}{radius}\PYG{p}{:} \PYG{n+nb}{int}\PYG{p}{,} \PYG{n}{padding}\PYG{p}{:} \PYG{n+nb}{int} \PYG{o}{=} \PYG{l+m+mi}{5}\PYG{p}{)} \PYG{o}{\PYGZhy{}}\PYG{o}{\PYGZgt{}} \PYG{n+nb}{bool}\PYG{p}{:}
+\PYG{+w}{        }\PYG{l+s+sd}{\PYGZdq{}\PYGZdq{}\PYGZdq{}Checks if a square area around a point is free (white).\PYGZdq{}\PYGZdq{}\PYGZdq{}}
+        \PYG{n}{y\PYGZus{}start} \PYG{o}{=} \PYG{n+nb}{max}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{n}{y} \PYG{o}{\PYGZhy{}} \PYG{n}{radius} \PYG{o}{\PYGZhy{}} \PYG{n}{padding}\PYG{p}{)}
+        \PYG{n}{y\PYGZus{}end} \PYG{o}{=} \PYG{n+nb}{min}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{height}\PYG{p}{,} \PYG{n}{y} \PYG{o}{+} \PYG{n}{radius} \PYG{o}{+} \PYG{n}{padding}\PYG{p}{)}
+        \PYG{n}{x\PYGZus{}start} \PYG{o}{=} \PYG{n+nb}{max}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{n}{x} \PYG{o}{\PYGZhy{}} \PYG{n}{radius} \PYG{o}{\PYGZhy{}} \PYG{n}{padding}\PYG{p}{)}
+        \PYG{n}{x\PYGZus{}end} \PYG{o}{=} \PYG{n+nb}{min}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{width}\PYG{p}{,} \PYG{n}{x} \PYG{o}{+} \PYG{n}{radius} \PYG{o}{+} \PYG{n}{padding}\PYG{p}{)}
+
+        \PYG{k}{return} \PYG{n}{np}\PYG{o}{.}\PYG{n}{all}\PYG{p}{(}\PYG{n}{image}\PYG{p}{[}\PYG{n}{y\PYGZus{}start}\PYG{p}{:}\PYG{n}{y\PYGZus{}end}\PYG{p}{,} \PYG{n}{x\PYGZus{}start}\PYG{p}{:}\PYG{n}{x\PYGZus{}end}\PYG{p}{]} \PYG{o}{==} \PYG{l+m+mi}{255}\PYG{p}{)}
+
+    \PYG{k}{def}\PYG{+w}{ }\PYG{n+nf}{\PYGZus{}apply\PYGZus{}watershed}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{p}{,} \PYG{n}{image}\PYG{p}{:} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ndarray}\PYG{p}{)} \PYG{o}{\PYGZhy{}}\PYG{o}{\PYGZgt{}} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ndarray}\PYG{p}{:}
+\PYG{+w}{        }\PYG{l+s+sd}{\PYGZdq{}\PYGZdq{}\PYGZdq{}Applies the watershed algorithm to separate touching objects.\PYGZdq{}\PYGZdq{}\PYGZdq{}}
+        \PYG{n}{inverted} \PYG{o}{=} \PYG{n}{cv2}\PYG{o}{.}\PYG{n}{bitwise\PYGZus{}not}\PYG{p}{(}\PYG{n}{image}\PYG{p}{)}
+        \PYG{n}{distance} \PYG{o}{=} \PYG{n}{ndimage}\PYG{o}{.}\PYG{n}{distance\PYGZus{}transform\PYGZus{}edt}\PYG{p}{(}\PYG{n}{inverted}\PYG{p}{)}
+
+        \PYG{n}{coords} \PYG{o}{=} \PYG{n}{peak\PYGZus{}local\PYGZus{}max}\PYG{p}{(}\PYG{n}{distance}\PYG{p}{,} \PYG{n}{min\PYGZus{}distance}\PYG{o}{=}\PYG{l+m+mi}{3}\PYG{p}{)}
+        \PYG{n}{local\PYGZus{}maxima} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{zeros\PYGZus{}like}\PYG{p}{(}\PYG{n}{distance}\PYG{p}{,} \PYG{n}{dtype}\PYG{o}{=}\PYG{n+nb}{bool}\PYG{p}{)}
+        \PYG{n}{local\PYGZus{}maxima}\PYG{p}{[}\PYG{n+nb}{tuple}\PYG{p}{(}\PYG{n}{coords}\PYG{o}{.}\PYG{n}{T}\PYG{p}{)}\PYG{p}{]} \PYG{o}{=} \PYG{k+kc}{True}
+
+        \PYG{n}{markers} \PYG{o}{=} \PYG{n}{ndimage}\PYG{o}{.}\PYG{n}{label}\PYG{p}{(}\PYG{n}{local\PYGZus{}maxima}\PYG{p}{)}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{]}
+        \PYG{n}{labels} \PYG{o}{=} \PYG{n}{watershed}\PYG{p}{(}\PYG{o}{\PYGZhy{}}\PYG{n}{distance}\PYG{p}{,} \PYG{n}{markers}\PYG{p}{,} \PYG{n}{mask}\PYG{o}{=}\PYG{n}{inverted}\PYG{p}{)}
+
+        \PYG{n}{separated\PYGZus{}image} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ones\PYGZus{}like}\PYG{p}{(}\PYG{n}{image}\PYG{p}{)} \PYG{o}{*} \PYG{l+m+mi}{255}
+        \PYG{k}{for} \PYG{n}{label} \PYG{o+ow}{in} \PYG{n}{np}\PYG{o}{.}\PYG{n}{unique}\PYG{p}{(}\PYG{n}{labels}\PYG{p}{)}\PYG{p}{:}
+            \PYG{k}{if} \PYG{n}{label} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{:}
+                \PYG{k}{continue}
+            \PYG{n}{separated\PYGZus{}image}\PYG{p}{[}\PYG{n}{labels} \PYG{o}{==} \PYG{n}{label}\PYG{p}{]} \PYG{o}{=} \PYG{l+m+mi}{0}
+
+        \PYG{n}{edges} \PYG{o}{=} \PYG{n}{cv2}\PYG{o}{.}\PYG{n}{Canny}\PYG{p}{(}\PYG{n}{labels}\PYG{o}{.}\PYG{n}{astype}\PYG{p}{(}\PYG{n}{np}\PYG{o}{.}\PYG{n}{uint8}\PYG{p}{)}\PYG{p}{,} \PYG{l+m+mi}{1}\PYG{p}{,} \PYG{l+m+mi}{2}\PYG{p}{)}
+        \PYG{n}{separated\PYGZus{}image}\PYG{p}{[}\PYG{n}{edges} \PYG{o}{\PYGZgt{}} \PYG{l+m+mi}{0}\PYG{p}{]} \PYG{o}{=} \PYG{l+m+mi}{255}
+
+        \PYG{k}{return} \PYG{n}{separated\PYGZus{}image}
+
+    \PYG{k}{def}\PYG{+w}{ }\PYG{n+nf}{\PYGZus{}create\PYGZus{}defective\PYGZus{}pore}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{p}{,} \PYG{n}{radius}\PYG{p}{:} \PYG{n+nb}{int}\PYG{p}{,} \PYG{n}{deformation}\PYG{p}{:} \PYG{n+nb}{float}\PYG{p}{,} \PYG{n}{stretch}\PYG{p}{:} \PYG{n+nb}{float}\PYG{p}{,} \PYG{n}{angle}\PYG{p}{:} \PYG{n+nb}{float}\PYG{p}{)} \PYG{o}{\PYGZhy{}}\PYG{o}{\PYGZgt{}} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ndarray}\PYG{p}{:}
+\PYG{+w}{        }\PYG{l+s+sd}{\PYGZdq{}\PYGZdq{}\PYGZdq{}Creates a single deformed pore using Perlin noise.\PYGZdq{}\PYGZdq{}\PYGZdq{}}
+        \PYG{n}{canvas\PYGZus{}size} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n}{radius} \PYG{o}{*} \PYG{l+m+mi}{2} \PYG{o}{*} \PYG{n}{stretch} \PYG{o}{*} \PYG{l+m+mf}{1.5}\PYG{p}{)}
+        \PYG{n}{canvas} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ones}\PYG{p}{(}\PYG{p}{(}\PYG{n}{canvas\PYGZus{}size}\PYG{p}{,} \PYG{n}{canvas\PYGZus{}size}\PYG{p}{)}\PYG{p}{,} \PYG{n}{dtype}\PYG{o}{=}\PYG{n}{np}\PYG{o}{.}\PYG{n}{uint8}\PYG{p}{)} \PYG{o}{*} \PYG{l+m+mi}{255}
+        \PYG{n}{center} \PYG{o}{=} \PYG{n}{canvas\PYGZus{}size} \PYG{o}{/}\PYG{o}{/} \PYG{l+m+mi}{2}
+
+        \PYG{n}{axes} \PYG{o}{=} \PYG{p}{(}\PYG{n+nb}{int}\PYG{p}{(}\PYG{n}{radius} \PYG{o}{*} \PYG{n}{stretch}\PYG{p}{)}\PYG{p}{,} \PYG{n}{radius}\PYG{p}{)}
+        \PYG{n}{temp\PYGZus{}ellipse} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{zeros}\PYG{p}{(}\PYG{p}{(}\PYG{n}{canvas\PYGZus{}size}\PYG{p}{,} \PYG{n}{canvas\PYGZus{}size}\PYG{p}{)}\PYG{p}{,} \PYG{n}{dtype}\PYG{o}{=}\PYG{n}{np}\PYG{o}{.}\PYG{n}{uint8}\PYG{p}{)}
+        \PYG{n}{cv2}\PYG{o}{.}\PYG{n}{ellipse}\PYG{p}{(}\PYG{n}{temp\PYGZus{}ellipse}\PYG{p}{,} \PYG{p}{(}\PYG{n}{center}\PYG{p}{,} \PYG{n}{center}\PYG{p}{)}\PYG{p}{,} \PYG{n}{axes}\PYG{p}{,} \PYG{n}{angle}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{,} \PYG{l+m+mi}{360}\PYG{p}{,} \PYG{l+m+mi}{255}\PYG{p}{,} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{)}
+
+        \PYG{n}{scale}\PYG{p}{,} \PYG{n}{octaves}\PYG{p}{,} \PYG{n}{persistence} \PYG{o}{=} \PYG{l+m+mf}{0.1}\PYG{p}{,} \PYG{l+m+mi}{2}\PYG{p}{,} \PYG{l+m+mf}{0.5}
+        \PYG{n}{angle\PYGZus{}rad} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{radians}\PYG{p}{(}\PYG{n}{angle}\PYG{p}{)}
+        \PYG{n}{cos\PYGZus{}a}\PYG{p}{,} \PYG{n}{sin\PYGZus{}a} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{cos}\PYG{p}{(}\PYG{n}{angle\PYGZus{}rad}\PYG{p}{)}\PYG{p}{,} \PYG{n}{np}\PYG{o}{.}\PYG{n}{sin}\PYG{p}{(}\PYG{n}{angle\PYGZus{}rad}\PYG{p}{)}
+
+        \PYG{k}{for} \PYG{n}{i} \PYG{o+ow}{in} \PYG{n+nb}{range}\PYG{p}{(}\PYG{n}{canvas\PYGZus{}size}\PYG{p}{)}\PYG{p}{:}
+            \PYG{k}{for} \PYG{n}{j} \PYG{o+ow}{in} \PYG{n+nb}{range}\PYG{p}{(}\PYG{n}{canvas\PYGZus{}size}\PYG{p}{)}\PYG{p}{:}
+                \PYG{k}{if} \PYG{n}{temp\PYGZus{}ellipse}\PYG{p}{[}\PYG{n}{i}\PYG{p}{,} \PYG{n}{j}\PYG{p}{]} \PYG{o}{\PYGZgt{}} \PYG{l+m+mi}{0}\PYG{p}{:}
+                    \PYG{n}{noise\PYGZus{}val} \PYG{o}{=} \PYG{n}{noise}\PYG{o}{.}\PYG{n}{pnoise2}\PYG{p}{(}\PYG{n}{i} \PYG{o}{*} \PYG{n}{scale}\PYG{p}{,} \PYG{n}{j} \PYG{o}{*} \PYG{n}{scale}\PYG{p}{,} \PYG{n}{octaves}\PYG{o}{=}\PYG{n}{octaves}\PYG{p}{,} \PYG{n}{persistence}\PYG{o}{=}\PYG{n}{persistence}\PYG{p}{)}
+
+                    \PYG{n}{dx}\PYG{p}{,} \PYG{n}{dy} \PYG{o}{=} \PYG{n}{j} \PYG{o}{\PYGZhy{}} \PYG{n}{center}\PYG{p}{,} \PYG{n}{i} \PYG{o}{\PYGZhy{}} \PYG{n}{center}
+                    \PYG{n}{x\PYGZus{}rot} \PYG{o}{=} \PYG{n}{dx} \PYG{o}{*} \PYG{n}{cos\PYGZus{}a} \PYG{o}{+} \PYG{n}{dy} \PYG{o}{*} \PYG{n}{sin\PYGZus{}a}
+                    \PYG{n}{y\PYGZus{}rot} \PYG{o}{=} \PYG{o}{\PYGZhy{}}\PYG{n}{dx} \PYG{o}{*} \PYG{n}{sin\PYGZus{}a} \PYG{o}{+} \PYG{n}{dy} \PYG{o}{*} \PYG{n}{cos\PYGZus{}a}
+
+                    \PYG{n}{safe\PYGZus{}radius} \PYG{o}{=} \PYG{n+nb}{max}\PYG{p}{(}\PYG{n}{radius}\PYG{p}{,} \PYG{l+m+mi}{1}\PYG{p}{)}
+                    \PYG{n}{safe\PYGZus{}stretch\PYGZus{}radius} \PYG{o}{=} \PYG{n+nb}{max}\PYG{p}{(}\PYG{n}{radius} \PYG{o}{*} \PYG{n}{stretch}\PYG{p}{,} \PYG{l+m+mi}{1}\PYG{p}{)}
+
+                    \PYG{n}{norm\PYGZus{}dist} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{sqrt}\PYG{p}{(}\PYG{p}{(}\PYG{n}{x\PYGZus{}rot} \PYG{o}{/} \PYG{n}{safe\PYGZus{}stretch\PYGZus{}radius}\PYG{p}{)}\PYG{o}{*}\PYG{o}{*}\PYG{l+m+mi}{2} \PYG{o}{+} \PYG{p}{(}\PYG{n}{y\PYGZus{}rot} \PYG{o}{/} \PYG{n}{safe\PYGZus{}radius}\PYG{p}{)}\PYG{o}{*}\PYG{o}{*}\PYG{l+m+mi}{2}\PYG{p}{)}
+
+                    \PYG{n}{modified\PYGZus{}boundary} \PYG{o}{=} \PYG{l+m+mf}{1.0} \PYG{o}{+} \PYG{n}{noise\PYGZus{}val} \PYG{o}{*} \PYG{n}{deformation}
+                    \PYG{k}{if} \PYG{n}{norm\PYGZus{}dist} \PYG{o}{\PYGZlt{}}\PYG{o}{=} \PYG{n}{modified\PYGZus{}boundary}\PYG{p}{:}
+                        \PYG{n}{canvas}\PYG{p}{[}\PYG{n}{i}\PYG{p}{,} \PYG{n}{j}\PYG{p}{]} \PYG{o}{=} \PYG{l+m+mi}{0}
+
+        \PYG{n}{coords} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{argwhere}\PYG{p}{(}\PYG{n}{canvas} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)}
+        \PYG{k}{if} \PYG{n}{coords}\PYG{o}{.}\PYG{n}{size} \PYG{o}{\PYGZgt{}} \PYG{l+m+mi}{0}\PYG{p}{:}
+            \PYG{n}{y\PYGZus{}min}\PYG{p}{,} \PYG{n}{x\PYGZus{}min} \PYG{o}{=} \PYG{n}{coords}\PYG{o}{.}\PYG{n}{min}\PYG{p}{(}\PYG{n}{axis}\PYG{o}{=}\PYG{l+m+mi}{0}\PYG{p}{)}
+            \PYG{n}{y\PYGZus{}max}\PYG{p}{,} \PYG{n}{x\PYGZus{}max} \PYG{o}{=} \PYG{n}{coords}\PYG{o}{.}\PYG{n}{max}\PYG{p}{(}\PYG{n}{axis}\PYG{o}{=}\PYG{l+m+mi}{0}\PYG{p}{)}
+            \PYG{n}{cropped} \PYG{o}{=} \PYG{n}{canvas}\PYG{p}{[}\PYG{n}{y\PYGZus{}min}\PYG{p}{:}\PYG{n}{y\PYGZus{}max}\PYG{o}{+}\PYG{l+m+mi}{1}\PYG{p}{,} \PYG{n}{x\PYGZus{}min}\PYG{p}{:}\PYG{n}{x\PYGZus{}max}\PYG{o}{+}\PYG{l+m+mi}{1}\PYG{p}{]}
+            \PYG{k}{return} \PYG{n}{cropped}
+
+        \PYG{k}{return} \PYG{n}{np}\PYG{o}{.}\PYG{n}{ones}\PYG{p}{(}\PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{,}\PYG{l+m+mi}{1}\PYG{p}{)}\PYG{p}{,} \PYG{n}{dtype}\PYG{o}{=}\PYG{n}{np}\PYG{o}{.}\PYG{n}{uint8}\PYG{p}{)} \PYG{o}{*} \PYG{l+m+mi}{255} \PYG{c+c1}{\PYGZsh{} Return a blank pixel if empty}
+\end{MintedVerbatim}
