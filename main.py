@@ -41,7 +41,7 @@ def main() -> None:
     print(f"Starting generation of {total_images} images...")
 
     for i in tqdm(range(total_images), desc="Generating images"):
-        clean_image, pore_info = pore_generator.generate_image()
+        clean_image, _ = pore_generator.generate_image()
 
         noisy_image = image_processor.add_background_noise(clean_image)
 

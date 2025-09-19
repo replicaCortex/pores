@@ -94,7 +94,7 @@ class PoreGenerator:
                 cv2.circle(pore_canvas, (radius, radius), radius, 0, -1)
                 center = radius
 
-            placed = False
+            # placed = False
             for _ in range(100):  # Max attempts
                 x = random.randint(effective_radius, self.width - effective_radius)
                 y = random.randint(effective_radius, self.height - effective_radius)
@@ -105,7 +105,7 @@ class PoreGenerator:
                         'x': x, 'y': y, 'radius': radius,
                         'stretch_factor': stretch_factor, 'angle': angle
                     })
-                    placed = True
+                    # placed = True
                     break
         return image
 
@@ -116,7 +116,7 @@ class PoreGenerator:
 
         for _ in range(group_count):
             temp_image = np.ones((self.height, self.width), dtype=np.uint8) * 255
-            pore_count = random.randint(2, 3)
+            pore_count = random.randint(2, 2)
             group_details = {'centers': [], 'radii': [], 'stretch_factors': [], 'angles': []}
 
             for i in range(pore_count):

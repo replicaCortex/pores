@@ -2,7 +2,6 @@
 Module for image processing and saving operations.
 """
 
-import random
 from typing import Any, Dict, Tuple
 
 import cv2
