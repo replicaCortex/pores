@@ -18,10 +18,15 @@ class PoreGenerator:
         self.config = config
         self.width = config['image_settings']['width']
         self.height = config['image_settings']['height']
+        # Добавляем маску занятых областей для лучшего контроля размещения
+        self.occupied_mask = None
 
     def generate_image(self) -> Tuple[np.ndarray, Dict[str, List]]:
         """Generates an image with all configured pore types."""
         image = np.ones((self.height, self.width), dtype=np.uint8) * 255
+        # Инициализируем маску занятых областей
+        self.occupied_mask = np.zeros((self.height, self.width), dtype=bool)
+        
         pore_info = {
             'single': [],
             'weakly_overlapping': [],
@@ -92,8 +97,6 @@ class PoreGenerator:
 
     def _add_edge_roughness(self, pore_mask: np.ndarray) -> np.ndarray:
         """Adds micro-roughness to pore edges for more realistic appearance."""
-        # Find edges
-        
         # Create small random kernel for edge perturbation
         kernel_size = random.choice([3, 5])
         kernel = np.random.rand(kernel_size, kernel_size)
@@ -144,8 +147,6 @@ class PoreGenerator:
         h, w = pore_mask.shape
         center = h // 2
         
-        # ... код генерации шума ...
-        
         # Apply distortion
         distorted = np.ones_like(pore_mask) * 255
         coords = np.argwhere(pore_mask == 0)
@@ -179,8 +180,46 @@ class PoreGenerator:
         
         return distorted
 
+    def _can_place_pore(self, pore_canvas: np.ndarray, x: int, y: int, 
+                       canvas_center: int, min_distance: int = 3) -> bool:
+        """Проверяет, можно ли разместить пору без пересечений."""
+        pore_height, pore_width = pore_canvas.shape
+        
+        # Рассчитываем границы размещения
+        y_start_img = max(0, y - canvas_center)
+        y_end_img = min(self.height, y - canvas_center + pore_height)
+        x_start_img = max(0, x - canvas_center)
+        x_end_img = min(self.width, x - canvas_center + pore_width)
+        
+        y_start_pore = max(0, canvas_center - y)
+        y_end_pore = y_start_pore + (y_end_img - y_start_img)
+        x_start_pore = max(0, canvas_center - x)
+        x_end_pore = x_start_pore + (x_end_img - x_start_img)
+        
+        # Получаем область поры
+        pore_region = pore_canvas[y_start_pore:y_end_pore, x_start_pore:x_end_pore]
+        pore_mask = pore_region < 255
+        
+        # Проверяем пересечение с уже занятыми областями
+        occupied_region = self.occupied_mask[y_start_img:y_end_img, x_start_img:x_end_img]
+        
+        # Расширяем маску поры для обеспечения минимального расстояния
+        if min_distance > 0:
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, 
+                                              (2*min_distance+1, 2*min_distance+1))
+            expanded_pore_mask = cv2.dilate(pore_mask.astype(np.uint8), kernel) > 0
+        else:
+            expanded_pore_mask = pore_mask
+        
+        # Проверяем пересечение
+        if np.any(occupied_region & expanded_pore_mask):
+            return False
+            
+        return True
+
     def _place_on_image(self, image: np.ndarray, canvas: np.ndarray, 
-                       canvas_center: int, x: int, y: int) -> np.ndarray:
+                       canvas_center: int, x: int, y: int, 
+                       update_occupied: bool = True) -> np.ndarray:
         """Улучшенное размещение без артефактов"""
         pore_height, pore_width = canvas.shape
 
@@ -199,6 +238,10 @@ class PoreGenerator:
         mask = pore_slice < 255  # Только черные пиксели поры
         
         image[y_start_img:y_end_img, x_start_img:x_end_img][mask] = 0
+        
+        # Обновляем маску занятых областей
+        if update_occupied and self.occupied_mask is not None:
+            self.occupied_mask[y_start_img:y_end_img, x_start_img:x_end_img][mask] = True
 
         return image
 
@@ -217,14 +260,15 @@ class PoreGenerator:
             canvas_size = pore_canvas.shape[0]
             center = canvas_size // 2
             
-            # ВАЖНО: учитываем размер canvas при генерации координат
-            margin = center + 5  # Добавляем небольшой отступ от краев
+            # Увеличиваем отступ от краев
+            margin = center + 10
 
-            for _ in range(100):  # Max attempts
+            for _ in range(200):  # Увеличиваем количество попыток
                 x = random.randint(margin, self.width - margin)
                 y = random.randint(margin, self.height - margin)
 
-                if self._is_area_free(image, x, y, radius):
+                # Используем улучшенную проверку размещения
+                if self._can_place_pore(pore_canvas, x, y, center, min_distance=5):
                     self._place_on_image(image, pore_canvas, center, x, y)
                     pore_info['single'].append({
                         'x': x, 'y': y, 'radius': radius,
@@ -232,52 +276,98 @@ class PoreGenerator:
                     })
                     break
         return image
+
     def _add_weakly_overlapping_pores(self, image: np.ndarray, pore_info: Dict[str, List]) -> np.ndarray:
         """Adds groups of weakly overlapping pores, separated by the watershed algorithm."""
         settings = self.config['pore_settings']['weakly_overlapping']
         group_count = random.randint(*settings['count_range'])
 
         for _ in range(group_count):
-            temp_image = np.ones((self.height, self.width), dtype=np.uint8) * 255
-            pore_count = random.randint(2, 3)
-            group_details = {'centers': [], 'radii': [], 'types': []}
+            # Ищем свободное место для группы
+            group_placed = False
+            for attempt in range(50):
+                temp_image = np.ones((self.height, self.width), dtype=np.uint8) * 255
+                temp_occupied = np.zeros((self.height, self.width), dtype=bool)
+                pore_count = random.randint(2, 3)
+                group_details = {'centers': [], 'radii': [], 'types': []}
+                group_valid = True
 
-            for i in range(pore_count):
-                radius = int(np.clip(np.random.normal(settings['radius_mean'], settings['radius_std']), 5, 25))
-                pore_type = random.choice(['smooth', 'normal', 'rough'])
-                
-                effective_radius = radius
-                margin = int(np.ceil(effective_radius * 1.5))
-
-                if i == 0:
-                    x = random.randint(margin, self.width - margin)
-                    y = random.randint(margin, self.height - margin)
-                else:
-                    overlap_percent = random.uniform(*settings['overlap_percentage_range'])
-                    prev_x, prev_y = group_details['centers'][-1]
-                    prev_radius = group_details['radii'][-1]
+                for i in range(pore_count):
+                    radius = int(np.clip(np.random.normal(settings['radius_mean'], settings['radius_std']), 5, 25))
+                    pore_type = random.choice(['smooth', 'normal', 'rough'])
                     
-                    distance = (prev_radius + effective_radius) * (1 - overlap_percent)
-                    direction_angle = random.uniform(0, 2 * np.pi)
+                    effective_radius = radius
+                    margin = int(np.ceil(effective_radius * 2))
+
+                    if i == 0:
+                        x = random.randint(margin, self.width - margin)
+                        y = random.randint(margin, self.height - margin)
+                        
+                        # Проверяем, свободна ли область для первой поры группы
+                        test_canvas = self._create_realistic_pore(radius, pore_type)
+                        if not self._can_place_pore(test_canvas, x, y, test_canvas.shape[0]//2, min_distance=10):
+                            group_valid = False
+                            break
+                    else:
+                        overlap_percent = random.uniform(*settings['overlap_percentage_range'])
+                        prev_x, prev_y = group_details['centers'][-1]
+                        prev_radius = group_details['radii'][-1]
+                        
+                        distance = (prev_radius + effective_radius) * (1 - overlap_percent)
+                        direction_angle = random.uniform(0, 2 * np.pi)
+                        
+                        x = int(prev_x + distance * np.cos(direction_angle))
+                        y = int(prev_y + distance * np.sin(direction_angle))
                     
-                    x = int(prev_x + distance * np.cos(direction_angle))
-                    y = int(prev_y + distance * np.sin(direction_angle))
-                
-                x = max(margin, min(x, self.width - margin))
-                y = max(margin, min(y, self.height - margin))
-                
-                pore_canvas = self._create_realistic_pore(radius, pore_type)
-                canvas_size = pore_canvas.shape[0]
-                center = canvas_size // 2
-                self._place_on_image(temp_image, pore_canvas, center, x, y)
+                    x = max(margin, min(x, self.width - margin))
+                    y = max(margin, min(y, self.height - margin))
+                    
+                    pore_canvas = self._create_realistic_pore(radius, pore_type)
+                    canvas_size = pore_canvas.shape[0]
+                    center = canvas_size // 2
+                    
+                    # Размещаем на временном изображении
+                    self._place_on_image_temp(temp_image, pore_canvas, center, x, y, temp_occupied)
 
-                group_details['centers'].append((x, y))
-                group_details['radii'].append(radius)
-                group_details['types'].append(pore_type)
+                    group_details['centers'].append((x, y))
+                    group_details['radii'].append(radius)
+                    group_details['types'].append(pore_type)
 
-            separated_image = self._apply_watershed(temp_image)
-            image = np.minimum(image, separated_image)
-            pore_info['weakly_overlapping'].append(group_details)
+                if group_valid:
+                    # Проверяем, не пересекается ли вся группа с существующими порами
+                    group_mask = temp_image < 255
+                    if not np.any(self.occupied_mask & group_mask):
+                        separated_image = self._apply_watershed(temp_image)
+                        image = np.minimum(image, separated_image)
+                        # Обновляем маску занятых областей
+                        self.occupied_mask |= (separated_image < 255)
+                        pore_info['weakly_overlapping'].append(group_details)
+                        group_placed = True
+                        break
+
+        return image
+
+    def _place_on_image_temp(self, image: np.ndarray, canvas: np.ndarray, 
+                            canvas_center: int, x: int, y: int, 
+                            temp_occupied: np.ndarray) -> np.ndarray:
+        """Временное размещение для проверки."""
+        pore_height, pore_width = canvas.shape
+
+        y_start_img = max(0, y - canvas_center)
+        y_end_img = min(self.height, y - canvas_center + pore_height)
+        x_start_img = max(0, x - canvas_center)
+        x_end_img = min(self.width, x - canvas_center + pore_width)
+
+        y_start_pore = max(0, canvas_center - y)
+        y_end_pore = y_start_pore + (y_end_img - y_start_img)
+        x_start_pore = max(0, canvas_center - x)
+        x_end_pore = x_start_pore + (x_end_img - x_start_img)
+
+        pore_slice = canvas[y_start_pore:y_end_pore, x_start_pore:x_end_pore]
+        mask = pore_slice < 255
+        
+        image[y_start_img:y_end_img, x_start_img:x_end_img][mask] = 0
+        temp_occupied[y_start_img:y_end_img, x_start_img:x_end_img][mask] = True
 
         return image
 
@@ -287,43 +377,65 @@ class PoreGenerator:
         group_count = random.randint(*settings['count_range'])
         
         for _ in range(group_count):
-            pore_count = random.randint(2, 4)
-            group_details = {'centers': [], 'radii': [], 'types': []}
+            # Ищем свободное место для группы
+            for attempt in range(50):
+                pore_count = random.randint(2, 4)
+                group_details = {'centers': [], 'radii': [], 'types': []}
+                group_valid = True
 
-            for i in range(pore_count):
-                radius = int(np.clip(np.random.normal(settings['radius_mean'], settings['radius_std']), 5, 20))
-                pore_type = random.choice(['normal', 'rough'])
+                # Создаем временное изображение для проверки
+                temp_image = np.ones((self.height, self.width), dtype=np.uint8) * 255
 
-                effective_radius = radius
-                margin = int(np.ceil(effective_radius * 1.5))
+                for i in range(pore_count):
+                    radius = int(np.clip(np.random.normal(settings['radius_mean'], settings['radius_std']), 5, 20))
+                    pore_type = random.choice(['normal', 'rough'])
 
-                if i == 0:
-                    x = random.randint(margin, self.width - margin)
-                    y = random.randint(margin, self.height - margin)
-                else:
-                    overlap_percent = random.uniform(*settings['overlap_percentage_range'])
-                    prev_x, prev_y = group_details['centers'][-1]
-                    prev_radius = group_details['radii'][-1]
+                    effective_radius = radius
+                    margin = int(np.ceil(effective_radius * 2))
 
-                    distance = (prev_radius + effective_radius) * (1 - overlap_percent)
-                    direction_angle = random.uniform(0, 2 * np.pi)
+                    if i == 0:
+                        x = random.randint(margin, self.width - margin)
+                        y = random.randint(margin, self.height - margin)
+                        
+                        # Проверяем область для первой поры
+                        test_canvas = self._create_realistic_pore(radius, pore_type)
+                        if not self._can_place_pore(test_canvas, x, y, test_canvas.shape[0]//2, min_distance=10):
+                            group_valid = False
+                            break
+                    else:
+                        overlap_percent = random.uniform(*settings['overlap_percentage_range'])
+                        prev_x, prev_y = group_details['centers'][-1]
+                        prev_radius = group_details['radii'][-1]
 
-                    x = int(prev_x + distance * np.cos(direction_angle))
-                    y = int(prev_y + distance * np.sin(direction_angle))
+                        distance = (prev_radius + effective_radius) * (1 - overlap_percent)
+                        direction_angle = random.uniform(0, 2 * np.pi)
 
-                x = max(margin, min(x, self.width - margin))
-                y = max(margin, min(y, self.height - margin))
+                        x = int(prev_x + distance * np.cos(direction_angle))
+                        y = int(prev_y + distance * np.sin(direction_angle))
 
-                pore_canvas = self._create_realistic_pore(radius, pore_type)
-                canvas_size = pore_canvas.shape[0]
-                center = canvas_size // 2
-                self._place_on_image(image, pore_canvas, center, x, y)
-                
-                group_details['centers'].append((x, y))
-                group_details['radii'].append(radius)
-                group_details['types'].append(pore_type)
+                    x = max(margin, min(x, self.width - margin))
+                    y = max(margin, min(y, self.height - margin))
 
-            pore_info['strongly_overlapping'].append(group_details)
+                    pore_canvas = self._create_realistic_pore(radius, pore_type)
+                    canvas_size = pore_canvas.shape[0]
+                    center = canvas_size // 2
+                    
+                    # Размещаем на временном изображении
+                    self._place_on_image(temp_image, pore_canvas, center, x, y, update_occupied=False)
+                    
+                    group_details['centers'].append((x, y))
+                    group_details['radii'].append(radius)
+                    group_details['types'].append(pore_type)
+
+                if group_valid:
+                    # Проверяем всю группу
+                    group_mask = temp_image < 255
+                    if not np.any(self.occupied_mask & group_mask):
+                        # Размещаем на основном изображении
+                        image = np.minimum(image, temp_image)
+                        self.occupied_mask |= group_mask
+                        pore_info['strongly_overlapping'].append(group_details)
+                        break
 
         return image
 
@@ -335,20 +447,24 @@ class PoreGenerator:
         for _ in range(count):
             radius = int(np.clip(np.random.normal(settings['radius_mean'], settings['radius_std']), 10, 30))
             
-            x = random.randint(radius * 2, self.width - radius * 2)
-            y = random.randint(radius * 2, self.height - radius * 2)
-
             # Always use defective type for these pores
             defective_pore_canvas = self._create_realistic_pore(radius, 'defective')
             
             canvas_size = defective_pore_canvas.shape[0]
             center = canvas_size // 2
-            self._place_on_image(image, defective_pore_canvas, center, x, y)
+            margin = center + 10
 
-            pore_info['defective'].append({
-                'x': x, 'y': y, 'radius': radius,
-                'type': 'defective'
-            })
+            for _ in range(200):  # Много попыток найти место
+                x = random.randint(margin, self.width - margin)
+                y = random.randint(margin, self.height - margin)
+
+                if self._can_place_pore(defective_pore_canvas, x, y, center, min_distance=8):
+                    self._place_on_image(image, defective_pore_canvas, center, x, y)
+                    pore_info['defective'].append({
+                        'x': x, 'y': y, 'radius': radius,
+                        'type': 'defective'
+                    })
+                    break
 
         return image
 
